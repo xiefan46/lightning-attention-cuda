@@ -50,6 +50,10 @@ def fwd_kernel_v0(
     s_index = s * index  # BLOCK * BLOCK
     s_index = tl.where(index >= 0, -s_index, float("-inf"))  # 下三角矩阵
     diag_decay = tl.exp(s_index)
+
+    if tl.program_id(0) == 0 and tl.program_id(1) == 0:
+        print(f"s_index: {s_index}, diag_decay: {diag_decay}")
+
     # print(f"index={index}, slope={s}")
     # print(f"s_index={s_index}")
     kv = tl.zeros([d, BLOCK_MODEL], dtype=tl.float32)  # d x BLOCK_MODEL

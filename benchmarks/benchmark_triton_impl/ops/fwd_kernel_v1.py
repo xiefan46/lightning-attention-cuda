@@ -56,6 +56,9 @@ def fwd_kernel_v1(
     diag_decay = tl.exp(s_index)  # BLOCK x BLOCK
     # print(f"diag_decay={diag_decay}")
 
+    if tl.program_id(0) == 0 and tl.program_id(1) == 0:
+        print(f"s_index: {s_index}, diag_decay: {diag_decay}")
+
     for i in range(NUM_BLOCK):
         # load q, size: BLOCK x d
         q_row_off = tl.arange(0, BLOCK) + i * BLOCK
