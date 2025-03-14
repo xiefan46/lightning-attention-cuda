@@ -77,12 +77,17 @@ def fwd_kernel_v1(
         qk = tl.dot(q, kt)  # BLOCK x BLOCK
         o_intra = tl.dot(qk * diag_decay, v)  # o_intra = qkv, size: BLOCK x BLOCK_MODEL
         tl.static_print("fwd_kernel_v1: o_intra shape=", o_intra.shape)
+        tl.device_print("fwd_kernel_v1 o_intra: ", o_intra)
         # compute inter block
 
         o_inter = tl.dot(q * q_decay, kv) # BLOCK x BLOCK_MODEL
+        tl.device_print("fwd_kernel_v1 o_inter: ", o_inter)
         tl.static_print("fwd_kernel_v1: o_inter shape=", o_inter.shape)
-        o = o_intra + o_inter
 
+        o = o_intra + o_inter
+        tl.device_print("fwd_kernel_v1 o value: ", o)
+
+        
         tl.static_print("fwd_kernel_v1: o shape=", o.shape)
 
         # update kv
@@ -96,7 +101,7 @@ def fwd_kernel_v1(
         tl.static_print(f"o_col_off shape=", o_col_off.shape)
         o_off = o_row_off[:, None] * e + o_col_off[None, :]
         tl.static_print("fwd_kernel_v1: o_off shape=", o_off.shape)
-        tl.device_print("fwd_kernel_v1 o value: ", o)
+        # tl.device_print("fwd_kernel_v1 o value: ", o)
         o_row_mask = o_row_off < n
         o_col_mask = o_col_off < e
         # tl.store(O + o_off, o.to(O.dtype.element_ty), mask=o_row_mask[:, None] & o_col_mask[None, :])
