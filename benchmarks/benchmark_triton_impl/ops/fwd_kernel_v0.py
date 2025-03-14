@@ -24,7 +24,7 @@ def fwd_kernel_v0(
 
     print(f"Q: {Q}, K: {K}, V: {V}")
 
-    q_head_val = tl.load(Q + tl.arange(0, 3))
+    q_head_val = tl.load(Q + tl.arange(0, 4))
     print(f"q_head_val={q_head_val}")
 
     ##### get offset
