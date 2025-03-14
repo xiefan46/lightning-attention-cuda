@@ -52,6 +52,7 @@ def fwd_kernel_v0(
     diag_decay = tl.exp(s_index)
     kv = tl.zeros([d, BLOCK_MODEL], dtype=tl.float32)  # d x BLOCK_MODEL
     tl.static_print("fwd_kernel_v0")
+    tl.static_print("NUM_BLOCK:", NUM_BLOCK)
     ##### compute
     for i in range(NUM_BLOCK):
         tl.static_print(i)
