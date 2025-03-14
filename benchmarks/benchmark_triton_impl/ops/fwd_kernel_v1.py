@@ -98,4 +98,5 @@ def fwd_kernel_v1(
         tl.static_print("fwd_kernel_v1: o_off shape=", o_off.shape)
         # tl.device_print("fwd_kernel_v1 o value: ", o)
         o_row_mask = o_row_off < n
-        tl.store(O + o_off, o.to(O.dtype.element_ty), mask=o_row_mask[:, None])
+        o_col_mask = o_col_off < e
+        tl.store(O + o_off, o.to(O.dtype.element_ty), mask=o_row_mask[:, None] & o_col_mask[None, :])
