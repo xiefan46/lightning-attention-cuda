@@ -19,7 +19,7 @@ def fwd_kernel_v0(
         NUM_BLOCK: tl.constexpr,
         BLOCK_MODEL: tl.constexpr,
 ):
-    if tl.program_id(0) != 0 or tl.program_id(1) == 0:
+    if tl.program_id(0) != 0 or tl.program_id(1) != 0:
         return
     ##### get offset
     off_bh = tl.program_id(0)
