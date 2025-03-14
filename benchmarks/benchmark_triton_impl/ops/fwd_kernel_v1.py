@@ -87,6 +87,6 @@ def fwd_kernel_v1(
         o_col_off = tl.arange(0, BLOCK_MODEL) + by * BLOCK_MODEL
         tl.static_print(f"o_col_off shape=", o_col_off.shape)
         o_off = o_row_off[:, None] * e + o_col_off[None, :]
-        tl.static_print(f"o_off shape=", o_off.shape)
+        tl.static_print(f"o_off shape={o_off.shape}", )
         o_row_mask = o_row_off < n
         tl.store(O + o_off, o.to(O.dtype.element_ty), mask=o_row_mask[:, None])
