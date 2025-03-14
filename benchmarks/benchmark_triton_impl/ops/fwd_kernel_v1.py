@@ -19,7 +19,7 @@ def fwd_kernel_v1(
         BLOCK_MODEL: tl.constexpr,
 ):
     # b = 2, h = 96,
-    tl.static_print("b=", b, " h=", h, " n=", n, " d=", d, " e=", e, " BLOCK=", BLOCK, " NUM_BLOCK=", NUM_BLOCK, " BLOCK_MODEL=", BLOCK_MODEL)
+    # tl.static_print("b=", b, " h=", h, " n=", n, " d=", d, " e=", e, " BLOCK=", BLOCK, " NUM_BLOCK=", NUM_BLOCK, " BLOCK_MODEL=", BLOCK_MODEL)
     bx = tl.program_id(0)  # bh offset
     by = tl.program_id(1)  # e offset
 
@@ -88,6 +88,10 @@ def fwd_kernel_v1(
         v_row_mask = v_row_off < n
         v_off = v_row_off[:, None] * e + v_col_off[None, :]
         v = tl.load(V + v_off, mask=v_row_mask[:, None], other=0.0).to(tl.float32)
+
+
+        if tl.program_id(0) == 0 and tl.program_id(1) == 0 and i == 0:
+            print(f"q: {q}, k: {kt}, v{v}")
 
         # tl.device_print("fwd_kernel_v1 v: ", v)
 

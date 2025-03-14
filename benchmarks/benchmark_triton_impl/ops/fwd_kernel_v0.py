@@ -74,6 +74,9 @@ def fwd_kernel_v0(
             V_block_ptr + off_block[:, None] * e, mask=off_block[:, None] < n, other=0.0  # BLOCK x BLOCK_MODEL
         ).to(tl.float32)
 
+        if tl.program_id(0) == 0 and tl.program_id(1) == 0 and i == 0:
+            print(f"q: {q}, k: {k_trans}, v{v}")
+
         # compute
         qk = tl.dot(q, k_trans) * diag_decay
         o_intra = tl.dot(qk, v)
