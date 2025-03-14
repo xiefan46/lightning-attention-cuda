@@ -30,7 +30,7 @@ def fwd_kernel_v1(
     V = V + bx * n * e
     O = O + bx * n * e
 
-    kv = tl.zeros((d, BLOCK_MODEL), dtype=tl.float32)
+    kv = tl.zeros((d, BLOCK_MODEL), dtype=tl.float32) # [d, BLOCK_MODEL]
 
     # calculate decay
     slope = tl.load(S + h_id).to(tl.float32)
@@ -41,6 +41,7 @@ def fwd_kernel_v1(
     index = tl.arange(0, BLOCK)[:, None] - tl.arange(0, BLOCK)[None, :]
     s_index = slope * index
     s_index = tl.where(index >= 0, -s_index, float("-inf"))
+    tl.static_print("s_index shape=", s_index.shape)
     diag_decay = tl.exp(s_index)  # BLOCK x BLOCK
 
     for i in range(NUM_BLOCK):
@@ -70,6 +71,8 @@ def fwd_kernel_v1(
         v_off = v_row_off[:, None] * e + v_col_off[None, :]
         v = tl.load(V + v_off, mask=v_row_mask[:, None], other=0.0).to(tl.float32)
 
+        tl.static_print(f"v shape=", v.shape)
+
         # compute intra block
         qk = tl.dot(q, kt)  # BLOCK x BLOCK
         o_intra = tl.dot(qk * diag_decay, v)  # o_intra = qkv, size: BLOCK x BLOCK_MODEL
@@ -77,7 +80,10 @@ def fwd_kernel_v1(
         # compute inter block
 
         o_inter = tl.dot(q * q_decay, kv) # BLOCK x BLOCK_MODEL
+        tl.static_print("fwd_kernel_v1: o_inter shape=", o_inter.shape)
         o = o_intra + o_inter
+
+        tl.static_print("fwd_kernel_v1: o shape=", o.shape)
 
         # update kv
         new_kv = tl.dot(kt * k_decay, v)  # d x BLOCK_MODEL
