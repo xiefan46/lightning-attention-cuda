@@ -25,7 +25,7 @@ def fwd_kernel_v1(
 
 
 
-    tl.device_print("bx: ", bx, " by:", by)
+    tl.device_print("bx=", bx, " by=", by)
 
     bh_offset = bx * n * d
     h_id = bx % h
