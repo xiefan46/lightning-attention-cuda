@@ -18,11 +18,12 @@ def fwd_kernel_v1(
         NUM_BLOCK: tl.constexpr,
         BLOCK_MODEL: tl.constexpr,
 ):
+    # b = 2, h = 96,
     tl.static_print("b=", b, " h=", h, " n=", n, " d=", d, " e=", e, " BLOCK=", BLOCK, " NUM_BLOCK=", NUM_BLOCK, " BLOCK_MODEL=", BLOCK_MODEL)
     bx = tl.program_id(0)  # bh offset
     by = tl.program_id(1)  # e offset
 
-    tl.device_print("fwd_kernel_v1 bx: ", bx)
+    # tl.device_print("fwd_kernel_v1 bx: ", bx)
 
     bh_offset = bx * n * d
     h_id = bx % h
@@ -32,7 +33,7 @@ def fwd_kernel_v1(
     V = V + bx * n * e
     O = O + bx * n * e
 
-    tl.device_print("fwd_kernel_v1 q: ", Q)
+    # tl.device_print("fwd_kernel_v1 q: ", Q)
 
     kv = tl.zeros((d, BLOCK_MODEL), dtype=tl.float32) # [d, BLOCK_MODEL]
 
@@ -58,7 +59,7 @@ def fwd_kernel_v1(
 
         tl.static_print(f"q shape=", q_off.shape)
 
-        tl.device_print("fwd_kernel_v1 q: ", q)
+        # tl.device_print("fwd_kernel_v1 q: ", q)
 
         # load k^T size: d x BLOCK
         kt_row_off = tl.arange(0, d)
@@ -78,7 +79,7 @@ def fwd_kernel_v1(
         v_off = v_row_off[:, None] * e + v_col_off[None, :]
         v = tl.load(V + v_off, mask=v_row_mask[:, None], other=0.0).to(tl.float32)
 
-        tl.device_print("fwd_kernel_v1 v: ", v)
+        # tl.device_print("fwd_kernel_v1 v: ", v)
 
         tl.static_print(f"v shape=", v.shape)
 
@@ -90,11 +91,11 @@ def fwd_kernel_v1(
         # compute inter block
 
         o_inter = tl.dot(q * q_decay, kv) # BLOCK x BLOCK_MODEL
-        tl.device_print("fwd_kernel_v1 o_inter: ", o_inter)
+        #tl.device_print("fwd_kernel_v1 o_inter: ", o_inter)
         tl.static_print("fwd_kernel_v1: o_inter shape=", o_inter.shape)
 
         o = o_intra + o_inter
-        tl.device_print("fwd_kernel_v1 o value: ", o)
+        #tl.device_print("fwd_kernel_v1 o value: ", o)
 
 
         tl.static_print("fwd_kernel_v1: o shape=", o.shape)
@@ -113,4 +114,6 @@ def fwd_kernel_v1(
         # tl.device_print("fwd_kernel_v1 o value: ", o)
         o_row_mask = o_row_off < n
         o_col_mask = o_col_off < e
-        # tl.store(O + o_off, o.to(O.dtype.element_ty), mask=o_row_mask[:, None] & o_col_mask[None, :])
+        tl.store(O + o_off, o.to(O.dtype.element_ty), mask=o_row_mask[:, None] & o_col_mask[None, :])
+
+    tl.device_print("bx=", bx, " by=", by, " finished!")
