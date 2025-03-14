@@ -50,11 +50,11 @@ def fwd_kernel_v0(
     s_index = s * index  # BLOCK * BLOCK
     s_index = tl.where(index >= 0, -s_index, float("-inf"))  # 下三角矩阵
     diag_decay = tl.exp(s_index)
-    print(f"index={index}, slope={s}")
-    print(f"s_index={s_index}")
+    # print(f"index={index}, slope={s}")
+    # print(f"s_index={s_index}")
     kv = tl.zeros([d, BLOCK_MODEL], dtype=tl.float32)  # d x BLOCK_MODEL
-    tl.static_print("fwd_kernel_v0")
-    tl.static_print("NUM_BLOCK:", NUM_BLOCK)
+    # tl.static_print("fwd_kernel_v0")
+    # tl.static_print("NUM_BLOCK:", NUM_BLOCK)
     ##### compute
     for i in range(NUM_BLOCK):
         tl.static_print(i)
@@ -83,7 +83,7 @@ def fwd_kernel_v0(
 
         o_off = O_block_ptr + off_block[:, None] * e
 
-        tl.static_print("fwd_kernel_v0: o_off shape=", o_off.shape)
+        # tl.static_print("fwd_kernel_v0: o_off shape=", o_off.shape)
         # tl.device_print("fwd_kernel_v0 o value: ", o)
         # save and update
         tl.store(
