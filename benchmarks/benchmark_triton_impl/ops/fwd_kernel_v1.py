@@ -26,7 +26,7 @@ def fwd_kernel_v1(
 
 
     # tl.device_print("bx=", bx, " by=", by)
-    print(f"bx={bx}, by={by}")
+    # print(f"bx={bx}, by={by}")
 
     bh_offset = bx * n * d
     h_id = bx % h
@@ -50,11 +50,11 @@ def fwd_kernel_v1(
     s_index = slope * index
     s_index = tl.where(index >= 0, -s_index, float("-inf"))
     # tl.static_print("s_index shape=", s_index.shape)
-    print(f"index={index}, slope={slope}")
-    print(f"s_index={s_index}")
+    # print(f"index={index}, slope={slope}")
+    # print(f"s_index={s_index}")
 
     diag_decay = tl.exp(s_index)  # BLOCK x BLOCK
-    print(f"diag_decay={diag_decay}")
+    # print(f"diag_decay={diag_decay}")
 
     for i in range(NUM_BLOCK):
         # load q, size: BLOCK x d
@@ -64,7 +64,7 @@ def fwd_kernel_v1(
         q_off = q_row_off[:, None] * d + q_col_off[None, :]
         q = tl.load(Q + q_off, mask=q_row_mask[:, None], other=0.0).to(tl.float32)
 
-        tl.static_print(f"q shape=", q_off.shape)
+        # tl.static_print(f"q shape=", q_off.shape)
 
         # tl.device_print("fwd_kernel_v1 q: ", q)
 
@@ -77,7 +77,7 @@ def fwd_kernel_v1(
 
         # tl.device_print("fwd_kernel_v1 kt: ", kt)
 
-        tl.static_print(f"kt shape=", kt_off.shape)
+        # tl.static_print(f"kt shape=", kt_off.shape)
 
         # load V size BLOCK x BLOCK_MODEL
         v_row_off = tl.arange(0, BLOCK) + i * BLOCK
@@ -93,13 +93,16 @@ def fwd_kernel_v1(
         # compute intra block
         qk = tl.dot(q, kt)  # BLOCK x BLOCK
         o_intra = tl.dot(qk * diag_decay, v)  # o_intra = qkv, size: BLOCK x BLOCK_MODEL
-        tl.static_print("fwd_kernel_v1: o_intra shape=", o_intra.shape)
-        tl.device_print("fwd_kernel_v1 o_intra: ", o_intra)
+        #tl.static_print("fwd_kernel_v1: o_intra shape=", o_intra.shape)
+        # tl.device_print("fwd_kernel_v1 o_intra: ", o_intra)
         # compute inter block
 
         o_inter = tl.dot(q * q_decay, kv) # BLOCK x BLOCK_MODEL
-        tl.device_print("fwd_kernel_v1 o_inter: ", o_inter)
+        # tl.device_print("fwd_kernel_v1 o_inter: ", o_inter)
         # tl.static_print("fwd_kernel_v1: o_inter shape=", o_inter.shape)
+
+        if tl.program_id(0) == 0 and tl.program_id(1) == 0 and i == 0:
+            print(f"o_intra {o_intra}, o_inter {o_inter}")
 
         o = o_intra + o_inter
         #tl.device_print("fwd_kernel_v1 o value: ", o)
@@ -123,4 +126,4 @@ def fwd_kernel_v1(
         o_col_mask = o_col_off < e
         tl.store(O + o_off, o.to(O.dtype.element_ty), mask=o_row_mask[:, None] & o_col_mask[None, :])
 
-    tl.device_print("bx=", bx, " by=", by, " finished!")
+    # tl.device_print("bx=", bx, " by=", by, " finished!")
