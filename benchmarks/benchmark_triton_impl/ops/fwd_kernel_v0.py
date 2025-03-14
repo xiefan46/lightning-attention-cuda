@@ -65,6 +65,10 @@ def fwd_kernel_v0(
         q = tl.load(  # BLOCK * d
             Q_block_ptr + off_block[:, None] * d, mask=off_block[:, None] < n, other=0.0
         ).to(tl.float32)
+
+        if tl.program_id(0) == 0 and tl.program_id(1) == 0 and i == 0:
+            print(f"q: {q}")
+
         k_trans = tl.load(  # k_trans -> d x BLOCK
             K_trans_block_ptr + off_block[None, :] * d,
             mask=off_block[None, :] < n,

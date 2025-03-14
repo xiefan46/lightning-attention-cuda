@@ -60,12 +60,16 @@ def fwd_kernel_v1(
         print(f"s_index: {s_index}, diag_decay: {diag_decay}")
 
     for i in range(NUM_BLOCK):
+
         # load q, size: BLOCK x d
         q_row_off = tl.arange(0, BLOCK) + i * BLOCK
         q_col_off = tl.arange(0, d)
         q_row_mask = q_row_off < n
         q_off = q_row_off[:, None] * d + q_col_off[None, :]
         q = tl.load(Q + q_off, mask=q_row_mask[:, None], other=0.0).to(tl.float32)
+
+        if tl.program_id(0) == 0 and tl.program_id(1) == 0 and i == 0:
+            print(f"q: {q}")
 
         # tl.static_print(f"q shape=", q_off.shape)
 
