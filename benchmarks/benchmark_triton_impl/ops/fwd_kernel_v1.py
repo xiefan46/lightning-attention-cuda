@@ -50,7 +50,7 @@ def fwd_kernel_v1(
         q_off = q_row_off[:, None] * d + q_col_off[None, :]
         q = tl.load(Q + q_off, mask=q_row_mask[:, None], other=0.0)
 
-        tl.static_print(f"q shape: {q_off.shape}")
+        tl.static_print(f"q shape=", q_off.shape)
 
         # load k^T size: d x BLOCK
         kt_row_off = tl.arange(0, d)
@@ -59,7 +59,7 @@ def fwd_kernel_v1(
         kt_off = kt_row_off[:, None] + kt_col_off[None, :]
         kt = tl.load(K + kt_off, mask=kt_col_off_mask[None, :], other=0.0)
 
-        tl.static_print(f"kt shape: {kt_off.shape}")
+        tl.static_print(f"kt shape=", kt_off.shape)
 
         # load V size BLOCK x BLOCK_MODEL
         v_row_off = tl.arange(0, BLOCK)
