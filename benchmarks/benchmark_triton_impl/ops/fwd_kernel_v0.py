@@ -21,6 +21,9 @@ def fwd_kernel_v0(
 ):
     if tl.program_id(0) != 0 or tl.program_id(1) != 0:
         return
+
+    print(f"Q: {Q}, K: {K}, V: {V}")
+
     ##### get offset
     off_bh = tl.program_id(0)
     off_h = off_bh % h

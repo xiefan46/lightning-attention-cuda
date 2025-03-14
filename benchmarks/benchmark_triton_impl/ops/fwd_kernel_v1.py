@@ -25,7 +25,7 @@ def fwd_kernel_v1(
     bx = tl.program_id(0)  # bh offset
     by = tl.program_id(1)  # e offset
 
-
+    print(f"Q: {Q}, K: {K}, V: {V}")
 
     # tl.device_print("bx=", bx, " by=", by)
     # print(f"bx={bx}, by={by}")
