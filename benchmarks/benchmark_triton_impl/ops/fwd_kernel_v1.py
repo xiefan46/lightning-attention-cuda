@@ -27,6 +27,9 @@ def fwd_kernel_v1(
 
     print(f"Q: {Q}, K: {K}, V: {V}")
 
+    q_head_val = tl.load(Q + tl.arange(0, 3))
+    print(f"q_head_val={q_head_val}")
+
     # tl.device_print("bx=", bx, " by=", by)
     # print(f"bx={bx}, by={by}")
 

@@ -24,6 +24,9 @@ def fwd_kernel_v0(
 
     print(f"Q: {Q}, K: {K}, V: {V}")
 
+    q_head_val = tl.load(Q + tl.arange(0, 3))
+    print(f"q_head_val={q_head_val}")
+
     ##### get offset
     off_bh = tl.program_id(0)
     off_h = off_bh % h
