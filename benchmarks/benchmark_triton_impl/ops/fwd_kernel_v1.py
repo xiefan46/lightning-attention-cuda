@@ -72,17 +72,17 @@ def fwd_kernel_v1(
         qk = tl.dot(q, kt)  # BLOCK x BLOCK
         o_intra = tl.dot(qk * diag_decay, v)  # o_intra = qkv, size: BLOCK x BLOCK_MODEL
 
-        # # compute inter block
-        #
-        # o_inter = tl.dot(q * q_decay, kv) # BLOCK x BLOCK_MODEL
-        # o = o_intra + o_inter
-        #
-        # # update kv
-        # new_kv = tl.dot(kt * k_decay, v)  # d x BLOCK_MODEL
-        #
-        # kv = block_decay * kv + new_kv
-        #
-        # # write result back TODO: o data type align
+        # compute inter block
+
+        o_inter = tl.dot(q * q_decay, kv) # BLOCK x BLOCK_MODEL
+        o = o_intra + o_inter
+
+        # update kv
+        new_kv = tl.dot(kt * k_decay, v)  # d x BLOCK_MODEL
+
+        kv = block_decay * kv + new_kv
+
+        # write result back TODO: o data type align
         # o_row_off = tl.arange(0, BLOCK)
         # o_col_off = tl.arange(0, BLOCK_MODEL)
         # o_off = o_row_off[:, None] * e + o_col_off[None, :]
