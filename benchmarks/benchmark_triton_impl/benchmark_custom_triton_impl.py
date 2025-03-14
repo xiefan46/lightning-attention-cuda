@@ -40,8 +40,6 @@ def test_lightning_attention_implementations(model_params):
     qkv = qkv.view(*new_shape)
     q, k, v = torch.split(qkv, [model_attn.head_dim] * 3, dim=-1)
 
-    print(f"cpu side q: {q}, k: {k}, v: {v}")
-
     q = q.transpose(1, 2)
     k = k.transpose(1, 2)
     v = v.transpose(1, 2)
