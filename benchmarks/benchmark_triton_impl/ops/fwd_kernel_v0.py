@@ -76,7 +76,8 @@ def fwd_kernel_v0(
         o_intra = tl.dot(qk, v)
         o_inter = tl.dot(q, kv) * q_decay
 
-        print(f"o_intra {o_intra}, o_inter {o_inter}")
+        if tl.program_id(0) == 0 and tl.program_id(1) == 0:
+            print(f"o_intra {o_intra}, o_inter {o_inter}")
 
         o = o_intra + o_inter
 
