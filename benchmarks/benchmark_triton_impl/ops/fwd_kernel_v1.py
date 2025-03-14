@@ -33,32 +33,32 @@ def fwd_kernel_v1(
 
     # calculate decay
     slope = tl.load(S + h_id).to(tl.float32)
-    q_decay = tl.exp((-slope * tl.arange(BLOCK))[:, None])  # BLOCK x 1
-    k_decay = tl.exp(((-slope * BLOCK - tl.arange(BLOCK)))[None, 1])  # 1 x BLOCK
+    q_decay = tl.exp((-slope * tl.arange(0, BLOCK))[:, None])  # BLOCK x 1
+    k_decay = tl.exp(((-slope * BLOCK - tl.arange(0, BLOCK)))[None, 1])  # 1 x BLOCK
     block_decay = tl.exp(-slope * BLOCK)
-    index = tl.arange(BLOCK)[:, None] - tl.arange(BLOCK)[None, :]
+    index = tl.arange(0, BLOCK)[:, None] - tl.arange(0, BLOCK)[None, :]
     s_index = slope * index
     s_index = tl.where(index >= 0, -s_index, float("-inf"))
     diag_decay = tl.exp(s_index)  # BLOCK x BLOCK
 
     for i in range(NUM_BLOCK):
         # load q, size: BLOCK x d
-        q_row_off = tl.arange(BLOCK) + i * BLOCK
-        q_col_off = tl.arange(d)
+        q_row_off = tl.arange(0, BLOCK) + i * BLOCK
+        q_col_off = tl.arange(0, d)
         q_row_mask = q_row_off < n
         q_off = q_row_off[:, None] & d + q_col_off[None, :]
         q = tl.load(Q + q_off, mask=q_row_mask[:, None], other=0.0)
 
         # load k^T size: d x BLOCK
-        kt_row_off = tl.arange(d)
-        kt_col_off = tl.arange(BLOCK) * d
+        kt_row_off = tl.arange(0, d)
+        kt_col_off = tl.arange(0, BLOCK) * d
         kt_col_off_mask = kt_col_off < n
         kt_off = kt_row_off[:, None] + kt_col_off[None, :]
         kt = tl.load(K + kt_off, mask=kt_col_off_mask[None, :], other=0.0)
 
         # load V size BLOCK x BLOCK_MODEL
-        v_row_off = tl.arange(BLOCK)
-        v_col_off = tl.arange(BLOCK_MODEL)
+        v_row_off = tl.arange(0, BLOCK)
+        v_col_off = tl.arange(0, BLOCK_MODEL)
         v_row_mask = v_row_off < n
         v_off = v_row_off[:, None] * e + v_col_off[None, :]
         v = tl.load(V + v_off, mask=v_row_mask[:, None], other=0.0)
@@ -77,8 +77,8 @@ def fwd_kernel_v1(
         kv = block_decay * kv + new_kv
 
         # write result back
-        o_row_off = tl.arange(BLOCK)
-        o_col_off = tl.arange(BLOCK_MODEL)
+        o_row_off = tl.arange(0, BLOCK)
+        o_col_off = tl.arange(0, BLOCK_MODEL)
         o_off = o_row_off[:, None] * e + o_col_off[None, :]
         o_row_mask = o_row_off < n
         tl.store(O + o_off, o, mask=o_row_mask[:, None])
