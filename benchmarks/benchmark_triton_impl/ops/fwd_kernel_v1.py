@@ -30,6 +30,8 @@ def fwd_kernel_v1(
     V = V + bx * n * e
     O = O + bx * n * e
 
+    tl.device_print("fwd_kernel_v1 q: ", Q)
+
     kv = tl.zeros((d, BLOCK_MODEL), dtype=tl.float32) # [d, BLOCK_MODEL]
 
     # calculate decay
