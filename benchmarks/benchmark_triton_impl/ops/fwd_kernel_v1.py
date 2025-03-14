@@ -71,7 +71,7 @@ def fwd_kernel_v1(
         kt_off = kt_col_off[None, :] * d + kt_row_off[:, None]
         kt = tl.load(K + kt_off, mask=kt_col_off_mask[None, :], other=0.0).to(tl.float32)
 
-        tl.device_print("fwd_kernel_v1 kt: ", kt)
+        # tl.device_print("fwd_kernel_v1 kt: ", kt)
 
         tl.static_print(f"kt shape=", kt_off.shape)
 
@@ -84,7 +84,7 @@ def fwd_kernel_v1(
 
         # tl.device_print("fwd_kernel_v1 v: ", v)
 
-        tl.static_print(f"v shape=", v.shape)
+        # tl.static_print(f"v shape=", v.shape)
 
         # compute intra block
         qk = tl.dot(q, kt)  # BLOCK x BLOCK
@@ -94,14 +94,14 @@ def fwd_kernel_v1(
         # compute inter block
 
         o_inter = tl.dot(q * q_decay, kv) # BLOCK x BLOCK_MODEL
-        #tl.device_print("fwd_kernel_v1 o_inter: ", o_inter)
-        tl.static_print("fwd_kernel_v1: o_inter shape=", o_inter.shape)
+        tl.device_print("fwd_kernel_v1 o_inter: ", o_inter)
+        # tl.static_print("fwd_kernel_v1: o_inter shape=", o_inter.shape)
 
         o = o_intra + o_inter
         #tl.device_print("fwd_kernel_v1 o value: ", o)
 
 
-        tl.static_print("fwd_kernel_v1: o shape=", o.shape)
+        # tl.static_print("fwd_kernel_v1: o shape=", o.shape)
 
         # update kv
         new_kv = tl.dot(kt * k_decay, v)  # d x BLOCK_MODEL
@@ -111,9 +111,9 @@ def fwd_kernel_v1(
         # write result back TODO: o data type align
         o_row_off = tl.arange(0, BLOCK) + i * BLOCK
         o_col_off = tl.arange(0, BLOCK_MODEL) + by * BLOCK_MODEL
-        tl.static_print(f"o_col_off shape=", o_col_off.shape)
+        # tl.static_print(f"o_col_off shape=", o_col_off.shape)
         o_off = o_row_off[:, None] * e + o_col_off[None, :]
-        tl.static_print("fwd_kernel_v1: o_off shape=", o_off.shape)
+        # tl.static_print("fwd_kernel_v1: o_off shape=", o_off.shape)
         # tl.device_print("fwd_kernel_v1 o value: ", o)
         o_row_mask = o_row_off < n
         o_col_mask = o_col_off < e
