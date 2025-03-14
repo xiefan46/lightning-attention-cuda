@@ -47,7 +47,7 @@ def fwd_kernel_v1(
         q_row_off = tl.arange(0, BLOCK) + i * BLOCK
         q_col_off = tl.arange(0, d)
         q_row_mask = q_row_off < n
-        q_off = q_row_off[:, None] & d + q_col_off[None, :]
+        q_off = q_row_off[:, None] * d + q_col_off[None, :]
         q = tl.load(Q + q_off, mask=q_row_mask[:, None], other=0.0)
 
         # load k^T size: d x BLOCK
