@@ -51,7 +51,7 @@ def fwd_kernel_v0(
     s_index = tl.where(index >= 0, -s_index, float("-inf"))  # 下三角矩阵
     diag_decay = tl.exp(s_index)
     kv = tl.zeros([d, BLOCK_MODEL], dtype=tl.float32)  # d x BLOCK_MODEL
-
+    tl.static_print("fwd_kernel_v0")
     ##### compute
     for i in range(NUM_BLOCK):
         # load
