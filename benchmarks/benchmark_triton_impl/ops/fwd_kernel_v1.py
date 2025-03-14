@@ -68,10 +68,10 @@ def fwd_kernel_v1(
         v_off = v_row_off[:, None] * e + v_col_off[None, :]
         v = tl.load(V + v_off, mask=v_row_mask[:, None], other=0.0).to(tl.float32)
 
-        # # compute intra block
-        # qk = tl.dot(q, kt)  # BLOCK x BLOCK
-        # o_intra = tl.dot(qk * diag_decay, v)  # o_intra = qkv, size: BLOCK x BLOCK_MODEL
-        #
+        # compute intra block
+        qk = tl.dot(q, kt)  # BLOCK x BLOCK
+        o_intra = tl.dot(qk * diag_decay, v)  # o_intra = qkv, size: BLOCK x BLOCK_MODEL
+
         # # compute inter block
         #
         # o_inter = tl.dot(q * q_decay, kv) # BLOCK x BLOCK_MODEL
