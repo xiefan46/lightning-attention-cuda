@@ -49,7 +49,10 @@ def fwd_kernel_v1(
     index = tl.arange(0, BLOCK)[:, None] - tl.arange(0, BLOCK)[None, :]
     s_index = slope * index
     s_index = tl.where(index >= 0, -s_index, float("-inf"))
-    tl.static_print("s_index shape=", s_index.shape)
+    # tl.static_print("s_index shape=", s_index.shape)
+    print(f"index={index}, slope={slope}")
+    print(f"s_index={s_index}")
+
     diag_decay = tl.exp(s_index)  # BLOCK x BLOCK
 
     for i in range(NUM_BLOCK):
