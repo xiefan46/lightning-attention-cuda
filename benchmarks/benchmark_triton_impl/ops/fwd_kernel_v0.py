@@ -76,7 +76,7 @@ def fwd_kernel_v0(
         o_off = O_block_ptr + off_block[:, None] * e
 
         tl.static_print("fwd_kernel_v0: o_off shape=", o_off.shape)
-        tl.device_print("fwd_kernel_v0 o value: ", o)
+        # tl.device_print("fwd_kernel_v0 o value: ", o)
         # save and update
         tl.store(
             o_off,
