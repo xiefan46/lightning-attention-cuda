@@ -48,7 +48,7 @@ def fwd_kernel_v1(
         q_col_off = tl.arange(0, d)
         q_row_mask = q_row_off < n
         q_off = q_row_off[:, None] * d + q_col_off[None, :]
-        q = tl.load(Q + q_off, mask=q_row_mask[:, None], other=0.0)
+        q = tl.load(Q + q_off, mask=q_row_mask[:, None], other=0.0).to(tl.float32)
 
         tl.static_print(f"q shape=", q_off.shape)
 
@@ -57,7 +57,7 @@ def fwd_kernel_v1(
         kt_col_off = tl.arange(0, BLOCK) * d
         kt_col_off_mask = kt_col_off < n
         kt_off = kt_row_off[:, None] + kt_col_off[None, :]
-        kt = tl.load(K + kt_off, mask=kt_col_off_mask[None, :], other=0.0)
+        kt = tl.load(K + kt_off, mask=kt_col_off_mask[None, :], other=0.0).to(tl.float32)
 
         tl.static_print(f"kt shape=", kt_off.shape)
 
@@ -66,7 +66,7 @@ def fwd_kernel_v1(
         v_col_off = tl.arange(0, BLOCK_MODEL)
         v_row_mask = v_row_off < n
         v_off = v_row_off[:, None] * e + v_col_off[None, :]
-        v = tl.load(V + v_off, mask=v_row_mask[:, None], other=0.0)
+        v = tl.load(V + v_off, mask=v_row_mask[:, None], other=0.0).to(tl.float32)
 
         # compute intra block
         qk = q @ kt  # BLOCK x BLOCK
