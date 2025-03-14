@@ -75,6 +75,9 @@ def fwd_kernel_v0(
         qk = tl.dot(q, k_trans) * diag_decay
         o_intra = tl.dot(qk, v)
         o_inter = tl.dot(q, kv) * q_decay
+
+        print(f"o_intra {o_intra}, o_inter {o_inter}")
+
         o = o_intra + o_inter
 
         o_off = O_block_ptr + off_block[:, None] * e

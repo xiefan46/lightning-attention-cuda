@@ -54,6 +54,7 @@ def fwd_kernel_v1(
     print(f"s_index={s_index}")
 
     diag_decay = tl.exp(s_index)  # BLOCK x BLOCK
+    print(f"diag_decay={diag_decay}")
 
     for i in range(NUM_BLOCK):
         # load q, size: BLOCK x d
