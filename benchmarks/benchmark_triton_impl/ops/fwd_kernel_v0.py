@@ -73,9 +73,13 @@ def fwd_kernel_v0(
         o_inter = tl.dot(q, kv) * q_decay
         o = o_intra + o_inter
 
+        o_off = O_block_ptr + off_block[:, None] * e
+
+        tl.static_print("fwd_kernel_v0: o_off shape=", o_off.shape)
+
         # save and update
         tl.store(
-            O_block_ptr + off_block[:, None] * e,
+            o_off,
             o.to(O_block_ptr.dtype.element_ty),
             mask=off_block[:, None] < n,
         )
