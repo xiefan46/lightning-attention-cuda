@@ -57,7 +57,6 @@ def fwd_kernel_v0(
     # tl.static_print("NUM_BLOCK:", NUM_BLOCK)
     ##### compute
     for i in range(NUM_BLOCK):
-        tl.static_print(i)
         # load
         q = tl.load(  # BLOCK * d
             Q_block_ptr + off_block[:, None] * d, mask=off_block[:, None] < n, other=0.0
