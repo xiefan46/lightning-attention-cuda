@@ -18,6 +18,7 @@ def fwd_kernel_v1(
         NUM_BLOCK: tl.constexpr,
         BLOCK_MODEL: tl.constexpr,
 ):
+    tl.static_print("b=", b, " h=", h, " n=", n, " d=", d, " e=", e, " BLOCK=", BLOCK, " NUM_BLOCK=", NUM_BLOCK, " BLOCK_MODEL=", BLOCK_MODEL)
     bx = tl.program_id(0)  # bh offset
     by = tl.program_id(1)  # e offset
 
