@@ -1,7 +1,5 @@
-import logging
-import unittest
-import torch
 import itertools
+import logging
 import math
 import os
 from typing import Optional, Tuple
@@ -9,11 +7,16 @@ from typing import Optional, Tuple
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import triton
+import triton.language as tl
 from einops import rearrange
+
+
+debug = eval(os.environ.get("debug", default="False"))
 
 BLOCK = 256
 
-# TODO: 改为jupyter notebook
+
 # Copied from transformers.models.llama.modeling_llama.LlamaRMSNorm with Llama->MiniMaxText01
 class MiniMaxText01RMSNorm(nn.Module):
     def __init__(self, hidden_size, eps=1e-6):
@@ -34,6 +37,8 @@ class MiniMaxText01RMSNorm(nn.Module):
 
 # Copied from https://huggingface.co/MiniMaxAI/MiniMax-Text-01/blob/main/modeling_minimax_text_01.py
 def get_activation_fn(activation):
+    if debug:
+        logging.info(f"activation: {activation}")
     if activation == "gelu":
         return F.gelu
     elif activation == "relu":
@@ -105,16 +110,16 @@ class MiniMaxText01LightningAttention(nn.Module):
         self.layer_idx = layer_idx
 
     def forward(
-        self,
-        hidden_states,
-        attn_mask: Optional[torch.Tensor] = None,  # (b, h, n, m)
-        output_attentions: bool = False,
-        past_key_value: Optional[Tuple[torch.Tensor]] = None,
-        use_cache: bool = False,
-        slope_rate: Optional[torch.Tensor] = None,
-        **kwargs,
+            self,
+            hidden_states,
+            attn_mask: Optional[torch.Tensor] = None,  # (b, h, n, m)
+            output_attentions: bool = False,
+            past_key_value: Optional[Tuple[torch.Tensor]] = None,
+            use_cache: bool = False,
+            slope_rate: Optional[torch.Tensor] = None,
+            **kwargs,
     ):
-        if not self.training: # if (not self.training) and (not do_eval)
+        if (not self.training) and (not do_eval):
             return self.inference(
                 hidden_states,
                 attn_mask,
@@ -125,23 +130,22 @@ class MiniMaxText01LightningAttention(nn.Module):
             )
 
     def inference(
-        self,
-        x,
-        attn_mask: Optional[torch.Tensor] = None,  # (b, n)
-        output_attentions: bool = False,
-        past_key_value: Optional[Tuple[torch.Tensor]] = None,
-        use_cache: bool = False,
-        slope_rate: Optional[torch.Tensor] = None,  # (h, 1, 1)
+            self,
+            x,
+            attn_mask: Optional[torch.Tensor] = None,  # (b, n)
+            output_attentions: bool = False,
+            past_key_value: Optional[Tuple[torch.Tensor]] = None,
+            use_cache: bool = False,
+            slope_rate: Optional[torch.Tensor] = None,  # (h, 1, 1)
     ):
         # x: b n d
         b, n, d = x.shape
         # linear map
-        # qkv shape [b, n, 3 * d]
         qkv = self.act(self.qkv_proj(x))
         new_shape = qkv.size()[:-1] + (self.num_heads, -1)
         qkv = qkv.view(*new_shape)
         q, k, v = torch.split(qkv, [self.head_dim] * 3, dim=3)
-        q = q.transpose(1, 2) # [b, h, n, d] = [2, 64, 1024, 96]
+        q = q.transpose(1, 2)
         k = k.transpose(1, 2)
         v = v.transpose(1, 2)
 
@@ -151,85 +155,55 @@ class MiniMaxText01LightningAttention(nn.Module):
             self.offset += 1
 
         # for align with metaseq
-        # ratio shape [h, 1, 1] [64, 1, 1]
         ratio = torch.exp(-slope_rate)
 
         # only use for the first time
         if past_key_value is None:
             slope_rate = slope_rate.to(torch.float32)
-            if attn_mask is not None: # attn_mask shape [b, n] [2, 1024]
-                # (1 - attn_mask).unsqueeze(1).unsqueeze(-1).to(torch.bool) shape: [2, 1, 1024, 1] -> [b, 1, n, 1] ?
-                # unsqueeze(k) -> add a new dimension in k dim
+            if attn_mask is not None:
                 v = v.masked_fill(
                     (1 - attn_mask).unsqueeze(1).unsqueeze(-1).to(torch.bool), 0
                 )
-
-            NUM_BLOCK = (n + BLOCK - 1) // BLOCK # BLOCK=256
+            NUM_BLOCK = (n + BLOCK - 1) // BLOCK
             b, h, n, d = q.shape
             e = v.shape[-1]
-
-            # decay的理解： q对应q_decay, k对应k_decay，block对应一个block_decay， qk一起的时候有一个diag_decay
-            # decay的计算其实是slope跟相对位置这两个变量的一个函数
-            # decay应该是跟位置编码相关
-
             # other
-            array = torch.arange(BLOCK).to(q) + 1 # array shape [256] [1, 2, 3... 256]
-
-            # [h, 1, 1] * [BLOCK, 1] = [64, 1, 1] * [256, 1] = [64, 256, 1] = [h, BLOCK, 1]
+            array = torch.arange(BLOCK).to(q) + 1
             q_decay = torch.exp(-slope_rate * array.reshape(-1, 1))
             k_decay = torch.exp(-slope_rate * (BLOCK - array.reshape(-1, 1)))
-            # index shape [BLOCK, BLOCK] [256, 256]
-            # index[0]: [0, -1, -2, ....-255]
-            # index[1]: [1, 0, -1, -2, ... -254]
-            # index[255]: [255, 254, ...1, 0]
             index = array[:, None] - array[None, :]
-            # index[None, None].shape [BLOCK, BLOCK] [256, 256]
-            # slope reate[d, 1, 1]  (s_index [64, 1, 1] * [256, 256]) = [64, 256, 256]
             s_index = (
-                slope_rate
-                * index[
-                    None,
-                    None,
-                ]
+                    slope_rate
+                    * index[
+                        None,
+                        None,
+                    ]
             )
-
-
-
             s_index = torch.where(index >= 0, -s_index, float("-inf"))
             diag_decay = torch.exp(s_index)
 
-            kv = torch.zeros(b, h, d, e).to(torch.float32).to(q.device) # [b, h, d, e] [2, 64, 96, 96]
+            kv = torch.zeros(b, h, d, e).to(torch.float32).to(q.device)
             output = torch.empty((b, h, n, e), dtype=q.dtype, device=q.device)
             for i in range(NUM_BLOCK):
                 si = i * BLOCK
                 ei = min(si + BLOCK, n)
-                m = ei - si # m dist between si and ei
+                m = ei - si
                 qi = q[:, :, si:ei].contiguous()
                 ki = k[:, :, si:ei].contiguous()
                 vi = v[:, :, si:ei].contiguous()
-                # q shape [b, h, n, d] = [2, 64, 1024, 96]  q_decay.shape [h, BLOCK, 1] = [64, 256, 1]
-                # (qi * q_decay[:, :m]).shape = [2, 64, 256, 96]
-                # qkv_none_diag.shape [2, 64, 256, 96] -> [b, h, BLOCK, e]
-                # qi shape [b, h, BLOCK, d]
-                qkv_none_diag = torch.matmul(qi * q_decay[:, :m], kv).to(torch.float32) # inter-block result 这里其实是标准矩阵乘法 alpha AB
+                qkv_none_diag = torch.matmul(qi * q_decay[:, :m], kv).to(torch.float32)
 
                 # diag
                 qk = (
-                    torch.matmul(qi, ki.transpose(-1, -2)).to(torch.float32)
-                    * diag_decay[:, :, :m, :m]
-                ) # qk shape [2, 64, 256, 256] -> [b, h, BLOCK, BLOCK] qk乘法本身很简单，这里主要需要理解乘上这个diag_decay的逻辑
-
-                # qkv_diag shape [2, 64, 256, 96]
-                qkv_diag = torch.matmul(qk, vi.to(torch.float32)) # intra-block result
-                # block_decay.shape [64, 1, 1]
+                        torch.matmul(qi, ki.transpose(-1, -2)).to(torch.float32)
+                        * diag_decay[:, :, :m, :m]
+                )
+                qkv_diag = torch.matmul(qk, vi.to(torch.float32))
                 block_decay = torch.exp(-slope_rate * m)
-                # output.shape [2, 64, 1024, 96]
                 output[:, :, si:ei] = qkv_none_diag + qkv_diag
-
-                # kv shape [2, 64, 96, 96]
                 kv = block_decay * kv + torch.matmul(
                     (ki * k_decay[:, -m:]).transpose(-1, -2).to(vi.dtype), vi
-                ) # update state with decay
+                )
 
         else:
             kv = past_key_value
@@ -237,11 +211,11 @@ class MiniMaxText01LightningAttention(nn.Module):
             for i in range(n):
                 kv = ratio * kv + torch.einsum(
                     "... n d, ... n e -> ... d e",
-                    k[:, :, i : i + 1],
-                    v[:, :, i : i + 1],
+                    k[:, :, i: i + 1],
+                    v[:, :, i: i + 1],
                 )
                 qkv = torch.einsum(
-                    "... n e, ... e d -> ... n d", q[:, :, i : i + 1], kv.to(q.dtype)
+                    "... n e, ... e d -> ... n d", q[:, :, i: i + 1], kv.to(q.dtype)
                 )
                 output.append(qkv)
             output = torch.concat(output, dim=-2)
@@ -259,68 +233,3 @@ class MiniMaxText01LightningAttention(nn.Module):
         return output, attn_weights, kv
 
 
-def _build_slope_tensor(n_attention_heads: int):
-    def get_slopes(n):
-        def get_slopes_power_of_2(n):
-
-            start = 2 ** (-(2 ** -(math.log2(n) - 3)))
-            ratio = start
-            return [start * ratio**i for i in range(n)]
-
-        if math.log2(n).is_integer():
-            return get_slopes_power_of_2(
-                n
-            )  # In the paper, we only train models that have 2^a heads for some a. This function has
-        else:  # some good properties that only occur when the input is a power of 2. To maintain that even
-            closest_power_of_2 = 2 ** math.floor(
-                math.log2(n)
-            )  # when the number of heads is not a power of 2, we use this workaround.
-            return (
-                get_slopes_power_of_2(closest_power_of_2)
-                + get_slopes(2 * closest_power_of_2)[0::2][: n - closest_power_of_2]
-            )
-
-    # h, 1, 1
-    slopes = torch.tensor(get_slopes(n_attention_heads)).reshape(
-        n_attention_heads, 1, 1
-    )
-
-    return slopes
-
-class TestLightning(unittest.TestCase):
-
-
-    def test_lightning_attn(self):
-        print("Start to run lightning_attn")
-        model_params = {
-            "hidden_size": 6144,
-            "num_attention_heads": 64,
-            "head_dim": 96,
-            "hidden_act": "silu",
-        }
-
-
-        torch.manual_seed(42)
-
-        batch_size = 2
-        seq_len = 1024
-        dtype = torch.bfloat16
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-        print(f"device: {device}")
-
-        hidden_states = torch.randn(
-            batch_size, seq_len, model_params["hidden_size"], dtype=dtype, device=device
-        )
-
-        attention_mask = torch.ones(batch_size, seq_len, dtype=dtype, device=device)
-
-        slope_rate = _build_slope_tensor(model_params["num_attention_heads"]).to(device)
-
-        model_attn = MiniMaxText01LightningAttention(**model_params).to(dtype).to(device)
-        model_attn.eval()
-
-        with torch.no_grad():
-            model_output, _, _ = model_attn.inference(
-                hidden_states, attn_mask=attention_mask, slope_rate=slope_rate
-            )

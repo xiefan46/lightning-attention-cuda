@@ -11,22 +11,110 @@ import triton.language as tl
 from einops import rearrange
 
 
+def _fwd_kernel_xiefan(
+        Q,
+        K,
+        V,
+        O,
+        S,  # log lambda
+        b: tl.constexpr,
+        h: tl.constexpr,
+        n: tl.constexpr,
+        d: tl.constexpr,
+        e: tl.constexpr,
+        BLOCK: tl.constexpr,
+        NUM_BLOCK: tl.constexpr,
+        BLOCK_MODEL: tl.constexpr,
+):
+    bx = tl.program_id(0)  # bh offset
+    by = tl.program_id(1)  # e offset
+
+    bh_offset = bx * n * d
+    h_id = bh_offset % h
+
+    Q += bh_offset
+    K += bh_offset
+    V = V + bx * n * e + by * BLOCK_MODEL
+    O = O + bx * n * e + by * BLOCK_MODEL
+
+    kv = tl.zeros((d, BLOCK_MODEL))
+
+    # calculate decay
+    slope = tl.load(S + h_id)
+    q_decay = tl.exp((tl.arange(BLOCK) * slope)[:, None])  # BLOCK x 1
+    k_decay = tl.exp(((BLOCK - tl.arange(BLOCK)) * slope)[None, 1])  # 1 x BLOCK
+    block_decay = tl.exp(slope * BLOCK)
+    index = tl.arange(BLOCK)[:, None] - tl.arange(BLOCK)[None, :]
+    s_index = slope * index
+    s_index = tl.where(index >= 0, -s_index, float("-inf"))
+    diag_decay = tl.exp(s_index)  # BLOCK x BLOCK
+
+    for i in range(NUM_BLOCK):
+        # load q, size: BLOCK x d
+        q_row_off = tl.arange(BLOCK) + i * BLOCK
+        q_col_off = tl.arange(d)
+        q_row_mask = q_row_off < n
+        q_col_mask = q_col_off < d
+        q_off = q_row_off[:, None] & d + q_col_off[None, :]
+        q = tl.load(Q + q_off, mask=q_row_mask[:, None] * q_col_mask[None, :], other=0.0)
+
+        # load k^T size: d x BLOCK
+        kt_row_off = tl.arange(d)
+        kt_col_off = tl.arange(BLOCK) * d
+        kt_row_off_mask = kt_row_off < d
+        kt_col_off_mask = kt_col_off < n
+        kt_off = kt_row_off[:, None] + kt_col_off[None, :]
+        kt_mask = kt_row_off_mask[:, None] & kt_col_off_mask[None, :]
+        kt = tl.load(K + kt_off, mask=kt_mask, other=0.0)
+
+        # load V size BLOCK x BLOCK_MODEL
+        v_row_off = tl.arange(BLOCK)
+        v_col_off = tl.arange(BLOCK_MODEL)
+        v_row_mask = v_row_off < n
+        v_col_mask = v_col_off < e
+        v_off = v_row_off[:, None] * e + v_col_off[None, :]
+        v_mask = v_row_mask[:, None] & v_col_mask[None, :]
+        v = tl.load(V + v_off, mask=v_mask, other=0.0)
+
+        # compute intra block
+        qk = q @ kt  # BLOCK x BLOCK
+        o_intra = (qk * diag_decay) @ v  # o_intra = qkv, size: BLOCK x BLOCK_MODEL
+
+        # compute inter block
+        o_inter = (q * q_decay) @ kv  # BLOCK x BLOCK_MODEL
+
+        o = o_intra + o_inter
+
+        # update kv
+        new_kv = (kt * k_decay) @ v   # d x BLOCK_MODEL
+        kv = block_decay * kv + new_kv
+
+        # write result back
+        o_row_off = tl.arange(BLOCK)
+        o_col_off = tl.arange(BLOCK_MODEL)
+        o_off = o_row_off[:, None] * e + o_col_off[None, :]
+        o_row_mask = o_row_off < n
+        o_col_mask = o_col_off < e
+        o_mask = o_row_mask[:, None] & o_col_mask[None, :]
+        tl.store(O + o_off, o, mask=o_mask)
+
+
 # Adapted from https://github.com/OpenNLPLab/lightning-attention/blob/main/lightning_attn/ops/triton/lightning_attn2.py
 @triton.jit
 def _fwd_kernel(
-    Q,
-    K,
-    V,
-    Out,
-    S,  # log lambda
-    b: tl.constexpr,
-    h: tl.constexpr,
-    n: tl.constexpr,
-    d: tl.constexpr,
-    e: tl.constexpr,
-    BLOCK: tl.constexpr,
-    NUM_BLOCK: tl.constexpr,
-    BLOCK_MODEL: tl.constexpr,
+        Q,
+        K,
+        V,
+        Out,
+        S,  # log lambda
+        b: tl.constexpr,
+        h: tl.constexpr,
+        n: tl.constexpr,
+        d: tl.constexpr,
+        e: tl.constexpr,
+        BLOCK: tl.constexpr,
+        NUM_BLOCK: tl.constexpr,
+        BLOCK_MODEL: tl.constexpr,
 ):
     ##### get offset
     off_bh = tl.program_id(0)
@@ -39,41 +127,41 @@ def _fwd_kernel(
     e_offset = off_e * BLOCK_MODEL
 
     ##### get block ptr
-    Q_block_ptr = Q + qk_offset + tl.arange(0, d)[None, :]
-    K_trans_block_ptr = K + qk_offset + tl.arange(0, d)[:, None]
-    V_block_ptr = V + v_offset + e_offset + tl.arange(0, BLOCK_MODEL)[None, :]
-    O_block_ptr = Out + o_offset + e_offset + tl.arange(0, BLOCK_MODEL)[None, :]
-    S_block_ptr = S + off_h
+    Q_block_ptr = Q + qk_offset + tl.arange(0, d)[None, :]  # 1 x d
+    K_trans_block_ptr = K + qk_offset + tl.arange(0, d)[:, None]  # d x 1
+    V_block_ptr = V + v_offset + e_offset + tl.arange(0, BLOCK_MODEL)[None, :]  # 1 x BLOCK_MODEL
+    O_block_ptr = Out + o_offset + e_offset + tl.arange(0, BLOCK_MODEL)[None, :]  # 1 x BLOCK_MODEL
+    S_block_ptr = S + off_h  # 1 x 1
 
     ##### init diag decay(Lambda); q, k decay; kv
-    s = tl.load(S_block_ptr)
+    s = tl.load(S_block_ptr)  # 1 x 1
     # q, k decay
     off_block = tl.arange(
         0, BLOCK
     )  # Not bug, this is a bit different from algorithm 1, but is mathematically equivalent
-    q_decay = tl.exp(-s.to(tl.float32) * off_block[:, None])
-    k_trans_decay = tl.exp(-s.to(tl.float32) * (BLOCK - off_block[None, :]))
-    block_decay = tl.exp(-s.to(tl.float32) * BLOCK)
+    q_decay = tl.exp(-s.to(tl.float32) * off_block[:, None])  # s: 1x1 * off_block BLOCK x 1 = BLOCK x 1
+    k_trans_decay = tl.exp(-s.to(tl.float32) * (BLOCK - off_block[None, :]))  # 1 x BLOCK
+    block_decay = tl.exp(-s.to(tl.float32) * BLOCK)  # 1 x 1
     # diag decay
-    index = off_block[:, None] - off_block[None, :]
-    s_index = s * index
-    s_index = tl.where(index >= 0, -s_index, float("-inf"))
+    index = off_block[:, None] - off_block[None, :]  # 相对位置 BLOCK x BLOCK
+    s_index = s * index  # BLOCK * BLOCK
+    s_index = tl.where(index >= 0, -s_index, float("-inf"))  # 下三角矩阵
     diag_decay = tl.exp(s_index)
-    kv = tl.zeros([d, BLOCK_MODEL], dtype=tl.float32)
+    kv = tl.zeros([d, BLOCK_MODEL], dtype=tl.float32)  # d x BLOCK_MODEL
 
     ##### compute
     for i in range(NUM_BLOCK):
         # load
-        q = tl.load(
+        q = tl.load(  # BLOCK * d
             Q_block_ptr + off_block[:, None] * d, mask=off_block[:, None] < n, other=0.0
         ).to(tl.float32)
-        k_trans = tl.load(
+        k_trans = tl.load(  # k_trans -> d x BLOCK
             K_trans_block_ptr + off_block[None, :] * d,
             mask=off_block[None, :] < n,
             other=0.0,
         ).to(tl.float32)
         v = tl.load(
-            V_block_ptr + off_block[:, None] * e, mask=off_block[:, None] < n, other=0.0
+            V_block_ptr + off_block[:, None] * e, mask=off_block[:, None] < n, other=0.0  # BLOCK x BLOCK_MODEL
         ).to(tl.float32)
 
         # compute
@@ -295,14 +383,14 @@ class MiniMaxText01LightningAttention(nn.Module):
         self.layer_idx = layer_idx
 
     def forward(
-        self,
-        hidden_states,
-        attn_mask: Optional[torch.Tensor] = None,  # (b, h, n, m)
-        output_attentions: bool = False,
-        past_key_value: Optional[Tuple[torch.Tensor]] = None,
-        use_cache: bool = False,
-        slope_rate: Optional[torch.Tensor] = None,
-        **kwargs,
+            self,
+            hidden_states,
+            attn_mask: Optional[torch.Tensor] = None,  # (b, h, n, m)
+            output_attentions: bool = False,
+            past_key_value: Optional[Tuple[torch.Tensor]] = None,
+            use_cache: bool = False,
+            slope_rate: Optional[torch.Tensor] = None,
+            **kwargs,
     ):
         if (not self.training) and (not do_eval):
             return self.inference(
@@ -315,13 +403,13 @@ class MiniMaxText01LightningAttention(nn.Module):
             )
 
     def inference(
-        self,
-        x,
-        attn_mask: Optional[torch.Tensor] = None,  # (b, n)
-        output_attentions: bool = False,
-        past_key_value: Optional[Tuple[torch.Tensor]] = None,
-        use_cache: bool = False,
-        slope_rate: Optional[torch.Tensor] = None,  # (h, 1, 1)
+            self,
+            x,
+            attn_mask: Optional[torch.Tensor] = None,  # (b, n)
+            output_attentions: bool = False,
+            past_key_value: Optional[Tuple[torch.Tensor]] = None,
+            use_cache: bool = False,
+            slope_rate: Optional[torch.Tensor] = None,  # (h, 1, 1)
     ):
         # x: b n d
         b, n, d = x.shape
@@ -358,11 +446,11 @@ class MiniMaxText01LightningAttention(nn.Module):
             k_decay = torch.exp(-slope_rate * (BLOCK - array.reshape(-1, 1)))
             index = array[:, None] - array[None, :]
             s_index = (
-                slope_rate
-                * index[
-                    None,
-                    None,
-                ]
+                    slope_rate
+                    * index[
+                        None,
+                        None,
+                    ]
             )
             s_index = torch.where(index >= 0, -s_index, float("-inf"))
             diag_decay = torch.exp(s_index)
@@ -380,8 +468,8 @@ class MiniMaxText01LightningAttention(nn.Module):
 
                 # diag
                 qk = (
-                    torch.matmul(qi, ki.transpose(-1, -2)).to(torch.float32)
-                    * diag_decay[:, :, :m, :m]
+                        torch.matmul(qi, ki.transpose(-1, -2)).to(torch.float32)
+                        * diag_decay[:, :, :m, :m]
                 )
                 qkv_diag = torch.matmul(qk, vi.to(torch.float32))
                 block_decay = torch.exp(-slope_rate * m)
@@ -396,11 +484,11 @@ class MiniMaxText01LightningAttention(nn.Module):
             for i in range(n):
                 kv = ratio * kv + torch.einsum(
                     "... n d, ... n e -> ... d e",
-                    k[:, :, i : i + 1],
-                    v[:, :, i : i + 1],
+                    k[:, :, i: i + 1],
+                    v[:, :, i: i + 1],
                 )
                 qkv = torch.einsum(
-                    "... n e, ... e d -> ... n d", q[:, :, i : i + 1], kv.to(q.dtype)
+                    "... n e, ... e d -> ... n d", q[:, :, i: i + 1], kv.to(q.dtype)
                 )
                 output.append(qkv)
             output = torch.concat(output, dim=-2)
@@ -420,10 +508,10 @@ class MiniMaxText01LightningAttention(nn.Module):
 
 def _build_slope_tensor(n_attention_heads: int):
     def get_slopes(n):
-        def get_slopes_power_of_2(n):
+        def get_slopes_power_of_2(n):  # output 2^(- 8h / H) for h in 1, 2, ... H
             start = 2 ** (-(2 ** -(math.log2(n) - 3)))
             ratio = start
-            return [start * ratio**i for i in range(n)]
+            return [start * ratio ** i for i in range(n)]
 
         if math.log2(n).is_integer():
             return get_slopes_power_of_2(
@@ -434,8 +522,8 @@ def _build_slope_tensor(n_attention_heads: int):
                 math.log2(n)
             )  # when the number of heads is not a power of 2, we use this workaround.
             return (
-                get_slopes_power_of_2(closest_power_of_2)
-                + get_slopes(2 * closest_power_of_2)[0::2][: n - closest_power_of_2]
+                    get_slopes_power_of_2(closest_power_of_2)
+                    + get_slopes(2 * closest_power_of_2)[0::2][: n - closest_power_of_2]
             )
 
     # h, 1, 1
@@ -497,7 +585,7 @@ def test_lightning_attention_implementations(model_params):
 
 
 def get_benchmark():
-    batch_size_range = [2**i for i in range(0, 7)]  # max 64
+    batch_size_range = [2 ** i for i in range(0, 7)]  # max 64
     seq_length_range = [256, 512, 1024, 2048, 4096]  # max 4096
     configs = list(itertools.product(batch_size_range, seq_length_range))
 
@@ -562,7 +650,7 @@ def get_benchmark():
                 lib_output = lib_output.view(batch_size, seq_len, -1)
                 lib_output = model_attn.norm(lib_output)
                 lib_output = (
-                    torch.sigmoid(model_attn.output_gate(hidden_states)) * lib_output
+                        torch.sigmoid(model_attn.output_gate(hidden_states)) * lib_output
                 )
                 return model_attn.out_proj(lib_output)
 
