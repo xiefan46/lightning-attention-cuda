@@ -33,6 +33,9 @@ def fwd_kernel_v0(
 
     ##### get block ptr
     Q_block_ptr = Q + qk_offset + tl.arange(0, d)[None, :]  # 1 x d
+
+
+
     K_trans_block_ptr = K + qk_offset + tl.arange(0, d)[:, None]  # d x 1
     V_block_ptr = V + v_offset + e_offset + tl.arange(0, BLOCK_MODEL)[None, :]  # 1 x BLOCK_MODEL
     O_block_ptr = Out + o_offset + e_offset + tl.arange(0, BLOCK_MODEL)[None, :]  # 1 x BLOCK_MODEL
@@ -67,6 +70,8 @@ def fwd_kernel_v0(
         q = tl.load(  # BLOCK * d
             Q_block_ptr + off_block[:, None] * d, mask=off_block[:, None] < n, other=0.0
         ).to(tl.float32)
+
+        print(f"q_off={Q_block_ptr + off_block[:, None] * d}")
 
         if tl.program_id(0) == 0 and tl.program_id(1) == 0 and i == 0:
             print(f"q: {q}")
