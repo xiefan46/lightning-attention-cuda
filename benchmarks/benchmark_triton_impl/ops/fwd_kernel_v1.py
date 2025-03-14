@@ -26,8 +26,8 @@ def fwd_kernel_v1(
 
     Q += bh_offset
     K += bh_offset
-    V = V + bx * n * e + by * BLOCK_MODEL
-    O = O + bx * n * e + by * BLOCK_MODEL
+    V = V + bx * n * e
+    O = O + bx * n * e
 
     kv = tl.zeros((d, BLOCK_MODEL), dtype=tl.float32)
 
@@ -63,7 +63,7 @@ def fwd_kernel_v1(
 
         # load V size BLOCK x BLOCK_MODEL
         v_row_off = tl.arange(0, BLOCK) + i * BLOCK
-        v_col_off = tl.arange(0, BLOCK_MODEL)
+        v_col_off = tl.arange(0, BLOCK_MODEL) + by * BLOCK_MODEL
         v_row_mask = v_row_off < n
         v_off = v_row_off[:, None] * e + v_col_off[None, :]
         v = tl.load(V + v_off, mask=v_row_mask[:, None], other=0.0).to(tl.float32)
@@ -84,7 +84,7 @@ def fwd_kernel_v1(
 
         # write result back TODO: o data type align
         o_row_off = tl.arange(0, BLOCK) + i * BLOCK
-        o_col_off = tl.arange(0, BLOCK_MODEL)
+        o_col_off = tl.arange(0, BLOCK_MODEL) + by * BLOCK_MODEL
         o_off = o_row_off[:, None] * e + o_col_off[None, :]
         o_row_mask = o_row_off < n
         tl.store(O + o_off, o.to(O.dtype.element_ty), mask=o_row_mask[:, None])
