@@ -68,23 +68,23 @@ def fwd_kernel_v1(
         v_off = v_row_off[:, None] * e + v_col_off[None, :]
         v = tl.load(V + v_off, mask=v_row_mask[:, None], other=0.0).to(tl.float32)
 
-        # compute intra block
-        qk = tl.dot(q, kt)  # BLOCK x BLOCK
-        o_intra = tl.dot(qk * diag_decay, v)  # o_intra = qkv, size: BLOCK x BLOCK_MODEL
-
-        # compute inter block
-
-        o_inter = tl.dot(q * q_decay, kv) # BLOCK x BLOCK_MODEL
-        o = o_intra + o_inter
-
-        # update kv
-        new_kv = tl.dot(kt * k_decay, v)  # d x BLOCK_MODEL
-
-        kv = block_decay * kv + new_kv
-
-        # write result back TODO: o data type align
-        o_row_off = tl.arange(0, BLOCK)
-        o_col_off = tl.arange(0, BLOCK_MODEL)
-        o_off = o_row_off[:, None] * e + o_col_off[None, :]
-        o_row_mask = o_row_off < n
-        tl.store(O + o_off, o.to(O.dtype.element_ty), mask=o_row_mask[:, None])
+        # # compute intra block
+        # qk = tl.dot(q, kt)  # BLOCK x BLOCK
+        # o_intra = tl.dot(qk * diag_decay, v)  # o_intra = qkv, size: BLOCK x BLOCK_MODEL
+        #
+        # # compute inter block
+        #
+        # o_inter = tl.dot(q * q_decay, kv) # BLOCK x BLOCK_MODEL
+        # o = o_intra + o_inter
+        #
+        # # update kv
+        # new_kv = tl.dot(kt * k_decay, v)  # d x BLOCK_MODEL
+        #
+        # kv = block_decay * kv + new_kv
+        #
+        # # write result back TODO: o data type align
+        # o_row_off = tl.arange(0, BLOCK)
+        # o_col_off = tl.arange(0, BLOCK_MODEL)
+        # o_off = o_row_off[:, None] * e + o_col_off[None, :]
+        # o_row_mask = o_row_off < n
+        # tl.store(O + o_off, o.to(O.dtype.element_ty), mask=o_row_mask[:, None])
