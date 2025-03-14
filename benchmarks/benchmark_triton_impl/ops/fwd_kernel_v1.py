@@ -54,6 +54,8 @@ def fwd_kernel_v1(
 
         tl.static_print(f"q shape=", q_off.shape)
 
+        tl.device_print("fwd_kernel_v1 q: ", q)
+
         # load k^T size: d x BLOCK
         kt_row_off = tl.arange(0, d)
         kt_col_off = tl.arange(0, BLOCK) + i * BLOCK
@@ -61,6 +63,7 @@ def fwd_kernel_v1(
         kt_off = kt_col_off[None, :] * d + kt_row_off[:, None]
         kt = tl.load(K + kt_off, mask=kt_col_off_mask[None, :], other=0.0).to(tl.float32)
 
+        tl.device_print("fwd_kernel_v1 kt: ", kt)
 
         tl.static_print(f"kt shape=", kt_off.shape)
 
@@ -70,6 +73,8 @@ def fwd_kernel_v1(
         v_row_mask = v_row_off < n
         v_off = v_row_off[:, None] * e + v_col_off[None, :]
         v = tl.load(V + v_off, mask=v_row_mask[:, None], other=0.0).to(tl.float32)
+
+        tl.device_print("fwd_kernel_v1 v: ", v)
 
         tl.static_print(f"v shape=", v.shape)
 
@@ -87,7 +92,7 @@ def fwd_kernel_v1(
         o = o_intra + o_inter
         tl.device_print("fwd_kernel_v1 o value: ", o)
 
-        
+
         tl.static_print("fwd_kernel_v1: o shape=", o.shape)
 
         # update kv
