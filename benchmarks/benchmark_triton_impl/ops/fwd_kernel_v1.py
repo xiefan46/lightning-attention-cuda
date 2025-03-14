@@ -68,7 +68,8 @@ def fwd_kernel_v1(
         q_col_off = tl.arange(0, d)
         q_row_mask = q_row_off < n
         q_off = q_row_off[:, None] * d + q_col_off[None, :]
-        print(f"q_off={Q + q_off}")
+        if i == 0:
+            print(f"q_off={Q + q_off}")
         q = tl.load(Q + q_off, mask=q_row_mask[:, None], other=0.0).to(tl.float32)
 
         if tl.program_id(0) == 0 and tl.program_id(1) == 0 and i == 0:
