@@ -19,7 +19,7 @@ def fwd_kernel_v0(
         NUM_BLOCK: tl.constexpr,
         BLOCK_MODEL: tl.constexpr,
 ):
-    if tl.program_id(0) != 0 or tl.program_id(1) != 0:
+    if tl.program_id(0) != 0 or tl.program_id(1) != 3:
         return
 
     # print(f"Q: {Q}, K: {K}, V: {V}")
@@ -70,6 +70,8 @@ def fwd_kernel_v0(
     kv = tl.zeros([d, BLOCK_MODEL], dtype=tl.float32)  # d x BLOCK_MODEL
     # tl.static_print("fwd_kernel_v0")
     # tl.static_print("NUM_BLOCK:", NUM_BLOCK)
+
+
     ##### compute
     for i in range(NUM_BLOCK):
         # load
