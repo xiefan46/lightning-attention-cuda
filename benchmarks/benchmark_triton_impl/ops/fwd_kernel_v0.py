@@ -126,7 +126,7 @@ def fwd_kernel_v0(
         # tl.device_print("fwd_kernel_v0 o value: ", o)
         # save and update
         tl.store(
-            o_off,
+            Out + o_off,
             o.to(O_block_ptr.dtype.element_ty),
             mask=off_block[:, None] < n,
         )
