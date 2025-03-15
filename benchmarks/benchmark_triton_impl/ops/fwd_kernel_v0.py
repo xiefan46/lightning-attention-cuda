@@ -19,7 +19,7 @@ def fwd_kernel_v0(
         NUM_BLOCK: tl.constexpr,
         BLOCK_MODEL: tl.constexpr,
 ):
-    if tl.program_id(0) != 127 or tl.program_id(1) != 0:
+    if tl.program_id(0) != 127 or tl.program_id(1) != 3:
         return
 
     print(f"b: {b}, h: {h}, n: {n}, d: {d}, e: {e}, BLOCK: {BLOCK}, NUM_BLOCK: {NUM_BLOCK}, BLOCK_MODEL: {BLOCK_MODEL}")
