@@ -78,9 +78,9 @@ def fwd_kernel_v0(
     for i in range(NUM_BLOCK):
         # load
 
-        if i == 0:
-            q_off = qk_offset + tl.arange(0, d)[None, :] + off_block[:, None] * d
-            print(f"Q offset: {q_off}, Q mask: {off_block[:, None] < n}")
+        # if i == 0:
+        #     q_off = qk_offset + tl.arange(0, d)[None, :] + off_block[:, None] * d
+        #     print(f"Q offset: {q_off}, Q mask: {off_block[:, None] < n}")
 
         q = tl.load(  # BLOCK * d
             Q_block_ptr + off_block[:, None] * d, mask=off_block[:, None] < n, other=0.0
