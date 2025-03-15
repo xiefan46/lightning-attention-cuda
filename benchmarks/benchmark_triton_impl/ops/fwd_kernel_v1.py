@@ -159,11 +159,11 @@ def fwd_kernel_v1(
         o_off = o_row_off[:, None] * e + o_col_off[None, :]
         # tl.static_print("fwd_kernel_v1: o_off shape=", o_off.shape)
         # tl.device_print("fwd_kernel_v1 o value: ", o)
-        o_row_mask = o_row_off < n
+        o_row_mask = o_row_off[:, None] < n
 
         # if i == i_check:
         #     print(f"o_off={vo_offset + o_off}")
 
-        tl.store(O + o_off, o.to(O_block_ptr.dtype.element_ty), mask=o_row_mask[:, None])
+        tl.store(O + o_off, o.to(O_block_ptr.dtype.element_ty), mask=o_row_mask)
 
     # tl.device_print("bx=", bx, " by=", by, " finished!")
