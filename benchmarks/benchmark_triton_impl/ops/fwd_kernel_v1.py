@@ -163,6 +163,6 @@ def fwd_kernel_v1(
         # if i == i_check:
         #     print(f"o_off={vo_offset + o_off}")
 
-        tl.store(O + o_off, o.to(O.dtype.element_ty), mask=o_row_mask[:, None] & o_col_mask[None, :])
+        # tl.store(O + o_off, o.to(O.dtype.element_ty), mask=o_row_mask[:, None] & o_col_mask[None, :])
 
     # tl.device_print("bx=", bx, " by=", by, " finished!")
