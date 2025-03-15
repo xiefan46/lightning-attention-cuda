@@ -123,7 +123,7 @@ def fwd_kernel_v0(
         # tl.device_print("fwd_kernel_v0 o value: ", o)
         # save and update
 
-        print(f"o shape: {o.shape}")
+        # print(f"o shape: {o.shape}")
 
         tl.store(
             Out + o_off,
