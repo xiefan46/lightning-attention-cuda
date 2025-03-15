@@ -12,7 +12,7 @@ def test_lightning_attention_implementations(model_params):
     torch.manual_seed(42)
 
     batch_size = 2
-    seq_len = 1024
+    seq_len = 512
     # dtype = torch.bfloat16
     dtype = torch.float32
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -54,15 +54,15 @@ def test_lightning_attention_implementations(model_params):
         lib_output = torch.sigmoid(model_attn.output_gate(hidden_states)) * lib_output
         lib_output = model_attn.out_proj(lib_output)
 
-        # torch.testing.assert_close(
-        #     model_output,
-        #     lib_output,
-        #     rtol=1e-3,
-        #     atol=1e-2,
-        #     msg="Lightning attention implementations produce different results",
-        # )
-        #
-        # print("✅ Two implementations match")
+        torch.testing.assert_close(
+            model_output,
+            lib_output,
+            rtol=1e-3,
+            atol=1e-2,
+            msg="Lightning attention implementations produce different results",
+        )
+
+        print("✅ Two implementations match")
 
 
 # def get_benchmark():
