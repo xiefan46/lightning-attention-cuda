@@ -53,15 +53,15 @@ def test_lightning_attention_implementations(model_params):
         lib_output = torch.sigmoid(model_attn.output_gate(hidden_states)) * lib_output
         lib_output = model_attn.out_proj(lib_output)
 
-        # torch.testing.assert_close(
-        #     model_output,
-        #     lib_output,
-        #     rtol=1e-3,
-        #     atol=1e-2,
-        #     msg="Lightning attention implementations produce different results",
-        # )
-        #
-        # print("✅ Two implementations match")
+        torch.testing.assert_close(
+            model_output,
+            lib_output,
+            rtol=1e-3,
+            atol=1e-2,
+            msg="Lightning attention implementations produce different results",
+        )
+
+        print("✅ Two implementations match")
 
 
 # def get_benchmark():
