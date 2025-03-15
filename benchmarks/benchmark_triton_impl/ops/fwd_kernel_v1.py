@@ -37,11 +37,21 @@ def fwd_kernel_v1(
     # tl.device_print("bx=", bx, " by=", by)
     # print(f"bx={bx}, by={by}")
 
+    off_bh = tl.program_id(0)
+    off_e = tl.program_id(1)
+    o_offset = off_bh * n * e
+    e_offset = off_e * BLOCK_MODEL
+
     qk_offset = bx * n * d
     vo_offset = bx * n * e
     h_id = bx % h
 
     O_block_ptr = O + vo_offset + by * BLOCK_MODEL + tl.arange(0, BLOCK_MODEL)[None, :]
+    off_block = tl.arange(
+        0, BLOCK
+    )
+
+    O_origin = O
 
     Q += qk_offset
     K += qk_offset
@@ -153,17 +163,32 @@ def fwd_kernel_v1(
         kv = block_decay * kv + new_kv
 
         # write result back TODO: o data type align
-        o_row_off = tl.arange(0, BLOCK) + i * BLOCK
-        o_col_off = tl.arange(0, BLOCK_MODEL) + by * BLOCK_MODEL
-        # tl.static_print(f"o_col_off shape=", o_col_off.shape)
-        o_off = o_row_off[:, None] * e + o_col_off[None, :]
-        # tl.static_print("fwd_kernel_v1: o_off shape=", o_off.shape)
-        # tl.device_print("fwd_kernel_v1 o value: ", o)
-        o_row_mask = o_row_off[:, None] < n
+        # o_row_off = tl.arange(0, BLOCK) + i * BLOCK
+        # o_col_off = tl.arange(0, BLOCK_MODEL) + by * BLOCK_MODEL
+        # # tl.static_print(f"o_col_off shape=", o_col_off.shape)
+        # o_off = o_row_off[:, None] * e + o_col_off[None, :]
+        # # tl.static_print("fwd_kernel_v1: o_off shape=", o_off.shape)
+        # # tl.device_print("fwd_kernel_v1 o value: ", o)
+        # o_row_mask = o_row_off[:, None] < n
 
         # if i == i_check:
         #     print(f"o_off={vo_offset + o_off}")
 
-        tl.store(O + o_off, o.to(O_block_ptr.dtype.element_ty), mask=o_row_mask)
+        # tl.store(O + o_off, o.to(O_block_ptr.dtype.element_ty), mask=o_row_mask)
+
+
+        # copy from v0
+        o_off = (o_offset + e_offset + tl.arange(0, BLOCK_MODEL)[None, :]) + off_block[:, None] * e
+
+        # tl.static_print("fwd_kernel_v0: o_off shape=", o_off.shape)
+        # tl.device_print("fwd_kernel_v0 o value: ", o)
+        # save and update
+        tl.store(
+            O_origin + o_off,
+            o.to(O_block_ptr.dtype.element_ty),
+            mask=off_block[:, None] < n,
+        )
+
+        # end of copy from v0
 
     # tl.device_print("bx=", bx, " by=", by, " finished!")
