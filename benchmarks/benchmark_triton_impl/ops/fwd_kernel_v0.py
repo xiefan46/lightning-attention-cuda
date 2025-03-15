@@ -19,10 +19,10 @@ def fwd_kernel_v0(
         NUM_BLOCK: tl.constexpr,
         BLOCK_MODEL: tl.constexpr,
 ):
-    if tl.program_id(0) != 127 or tl.program_id(1) != 3:
-        return
+    # if tl.program_id(0) != 127 or tl.program_id(1) != 3:
+    #     return
 
-    print(f"b: {b}, h: {h}, n: {n}, d: {d}, e: {e}, BLOCK: {BLOCK}, NUM_BLOCK: {NUM_BLOCK}, BLOCK_MODEL: {BLOCK_MODEL}")
+    # print(f"b: {b}, h: {h}, n: {n}, d: {d}, e: {e}, BLOCK: {BLOCK}, NUM_BLOCK: {NUM_BLOCK}, BLOCK_MODEL: {BLOCK_MODEL}")
 
     # print(f"Q: {Q}, K: {K}, V: {V}")
 
@@ -98,15 +98,15 @@ def fwd_kernel_v0(
             other=0.0,
         ).to(tl.float32)
 
-        if i == 0:
-            print(f"K offset: {(qk_offset + tl.arange(0, d)[:, None]) + off_block[None, :] * d}, K mask: {off_block[None, :] < n}")
+        # if i == 0:
+        #     print(f"K offset: {(qk_offset + tl.arange(0, d)[:, None]) + off_block[None, :] * d}, K mask: {off_block[None, :] < n}")
 
         v = tl.load(
             V_block_ptr + off_block[:, None] * e, mask=off_block[:, None] < n, other=0.0  # BLOCK x BLOCK_MODEL
         ).to(tl.float32)
 
-        if i == 0:
-            print(f"V offset: {(v_offset + e_offset + tl.arange(0, BLOCK_MODEL)[None, :]) + off_block[:, None] * e}, V mask: {off_block[:, None] < n}")
+        # if i == 0:
+        #     print(f"V offset: {(v_offset + e_offset + tl.arange(0, BLOCK_MODEL)[None, :]) + off_block[:, None] * e}, V mask: {off_block[:, None] < n}")
 
         # if tl.program_id(0) == 0 and tl.program_id(1) == 0 and i == 0:
         #     print(f"q: {q}, k: {k_trans}, v{v}")
@@ -123,8 +123,8 @@ def fwd_kernel_v0(
 
         o_off = (o_offset + e_offset + tl.arange(0, BLOCK_MODEL)[None, :]) + off_block[:, None] * e
 
-        if i == 0:
-            print(f"O offset: {o_off}, O mask: {off_block[:, None] < n}")
+        # if i == 0:
+        #     print(f"O offset: {o_off}, O mask: {off_block[:, None] < n}")
 
         # tl.static_print("fwd_kernel_v0: o_off shape=", o_off.shape)
         # tl.device_print("fwd_kernel_v0 o value: ", o)
