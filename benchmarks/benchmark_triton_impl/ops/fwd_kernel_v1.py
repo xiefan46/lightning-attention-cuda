@@ -20,6 +20,8 @@ def fwd_kernel_v1(
 ):
     if tl.program_id(0) != 0 or tl.program_id(1) != 3:
         return
+
+    print(f"b: {b}, h: {h}, n: {n}, d: {d}, e: {e}, BLOCK: {BLOCK}, NUM_BLOCK: {NUM_BLOCK}, BLOCK_MODEL: {BLOCK_MODEL}")
     # b = 2, h = 96,
     # tl.static_print("b=", b, " h=", h, " n=", n, " d=", d, " e=", e, " BLOCK=", BLOCK, " NUM_BLOCK=", NUM_BLOCK, " BLOCK_MODEL=", BLOCK_MODEL)
     bx = tl.program_id(0)  # bh offset
