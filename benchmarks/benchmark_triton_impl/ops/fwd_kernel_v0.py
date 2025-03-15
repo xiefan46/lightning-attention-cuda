@@ -83,7 +83,7 @@ def fwd_kernel_v0(
 
         if i == i_check:
             q_off = qk_offset + tl.arange(0, d)[None, :] + off_block[:, None] * d
-            print(f"Q offset: {q_off}, Q mask: {off_block[:, None] < n}")
+            print(f"Q offset: {q_off}")
 
         q = tl.load(  # BLOCK * d
             Q_block_ptr + off_block[:, None] * d, mask=off_block[:, None] < n, other=0.0
@@ -97,14 +97,14 @@ def fwd_kernel_v0(
         ).to(tl.float32)
 
         if i == i_check:
-            print(f"K offset: {(qk_offset + tl.arange(0, d)[:, None]) + off_block[None, :] * d}, K mask: {off_block[None, :] < n}")
+            print(f"K offset: {(qk_offset + tl.arange(0, d)[:, None]) + off_block[None, :] * d}")
 
         v = tl.load(
             V_block_ptr + off_block[:, None] * e, mask=off_block[:, None] < n, other=0.0  # BLOCK x BLOCK_MODEL
         ).to(tl.float32)
 
         if i == i_check:
-            print(f"V offset: {(v_offset + e_offset + tl.arange(0, BLOCK_MODEL)[None, :]) + off_block[:, None] * e}, V mask: {off_block[:, None] < n}")
+            print(f"V offset: {(v_offset + e_offset + tl.arange(0, BLOCK_MODEL)[None, :]) + off_block[:, None] * e}")
 
         # compute
         qk = tl.dot(q, k_trans) * diag_decay
@@ -117,7 +117,7 @@ def fwd_kernel_v0(
         o_off = (o_offset + e_offset + tl.arange(0, BLOCK_MODEL)[None, :]) + off_block[:, None] * e
 
         if i == i_check:
-            print(f"O offset: {o_off}, O mask: {off_block[:, None] < n}")
+            print(f"O offset: {o_off}")
 
         # tl.static_print("fwd_kernel_v0: o_off shape=", o_off.shape)
         # tl.device_print("fwd_kernel_v0 o value: ", o)
