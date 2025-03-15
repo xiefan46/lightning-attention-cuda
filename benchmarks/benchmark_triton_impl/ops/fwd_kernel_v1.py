@@ -182,7 +182,7 @@ def fwd_kernel_v1(
 
         # tl.static_print("fwd_kernel_v0: o_off shape=", o_off.shape)
         # tl.device_print("fwd_kernel_v0 o value: ", o)
-        
+
         print(f"o shape: {o.shape}")
 
         # save and update
