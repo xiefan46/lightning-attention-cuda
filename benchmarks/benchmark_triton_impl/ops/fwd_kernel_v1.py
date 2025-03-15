@@ -18,8 +18,8 @@ def fwd_kernel_v1(
         NUM_BLOCK: tl.constexpr,
         BLOCK_MODEL: tl.constexpr,
 ):
-    if tl.program_id(0) != 127 or tl.program_id(1) != 3:
-        return
+    # if tl.program_id(0) != 127 or tl.program_id(1) != 3:
+    #     return
     # i_check = 15
     # print(f"bx: {tl.program_id(0)}, by: {tl.program_id(1)}")
 
