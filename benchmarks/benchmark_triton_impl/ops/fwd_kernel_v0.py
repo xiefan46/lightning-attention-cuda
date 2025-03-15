@@ -25,7 +25,7 @@ def fwd_kernel_v0(
     i_check = 15
 
     # print(f"bx: {tl.program_id(0)}, by: {tl.program_id(1)}")
-    # print(f"b: {b}, h: {h}, n: {n}, d: {d}, e: {e}, BLOCK: {BLOCK}, NUM_BLOCK: {NUM_BLOCK}, BLOCK_MODEL: {BLOCK_MODEL}")
+    print(f"b: {b}, h: {h}, n: {n}, d: {d}, e: {e}, BLOCK: {BLOCK}, NUM_BLOCK: {NUM_BLOCK}, BLOCK_MODEL: {BLOCK_MODEL}")
 
     # print(f"Q: {Q}, K: {K}, V: {V}")
 
