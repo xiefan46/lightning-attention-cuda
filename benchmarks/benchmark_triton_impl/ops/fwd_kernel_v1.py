@@ -18,8 +18,8 @@ def fwd_kernel_v1(
         NUM_BLOCK: tl.constexpr,
         BLOCK_MODEL: tl.constexpr,
 ):
-    # if tl.program_id(0) != 127 or tl.program_id(1) != 3:
-    #     return
+    if tl.program_id(0) != 127 or tl.program_id(1) != 3:
+        return
     # i_check = 15
     # print(f"bx: {tl.program_id(0)}, by: {tl.program_id(1)}")
 
@@ -182,6 +182,9 @@ def fwd_kernel_v1(
 
         # tl.static_print("fwd_kernel_v0: o_off shape=", o_off.shape)
         # tl.device_print("fwd_kernel_v0 o value: ", o)
+        
+        print(f"o shape: {o.shape}")
+
         # save and update
         tl.store(
             O_origin + o_off,

@@ -19,8 +19,8 @@ def fwd_kernel_v0(
         NUM_BLOCK: tl.constexpr,
         BLOCK_MODEL: tl.constexpr,
 ):
-    # if tl.program_id(0) != 127 or tl.program_id(1) != 3:
-    #     return
+    if tl.program_id(0) != 127 or tl.program_id(1) != 3:
+        return
 
     # i_check = 15
 
@@ -122,6 +122,9 @@ def fwd_kernel_v0(
         # tl.static_print("fwd_kernel_v0: o_off shape=", o_off.shape)
         # tl.device_print("fwd_kernel_v0 o value: ", o)
         # save and update
+
+        print(f"o shape: {o.shape}")
+
         tl.store(
             Out + o_off,
             o.to(O_block_ptr.dtype.element_ty),
