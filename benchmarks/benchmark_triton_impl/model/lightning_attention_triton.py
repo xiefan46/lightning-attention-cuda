@@ -37,7 +37,12 @@ def lightning_attn2(q, k, v, s, kernel_impl):
     NUM_BLOCK = triton.cdiv(q.shape[2], BLOCK)
     # parallel over channel
     BLOCK_MODEL = min(triton.next_power_of_2(e_padded), 32)
+
+
+
     grid = (b * h, triton.cdiv(e_padded, BLOCK_MODEL))
+
+    print(f"kernel_impl={kernel_impl}, grid: {grid}")
 
     kernel_impl[grid](
         q_padded,
