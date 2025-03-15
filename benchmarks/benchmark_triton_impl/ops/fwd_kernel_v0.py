@@ -19,9 +19,12 @@ def fwd_kernel_v0(
         NUM_BLOCK: tl.constexpr,
         BLOCK_MODEL: tl.constexpr,
 ):
-    # if tl.program_id(0) != 127 or tl.program_id(1) != 3:
-    #     return
-    print(f"bx: {tl.program_id(0)}, by: {tl.program_id(1)}")
+    if tl.program_id(0) != 127 or tl.program_id(1) != 3:
+        return
+
+    i_check = 15
+
+    # print(f"bx: {tl.program_id(0)}, by: {tl.program_id(1)}")
     # print(f"b: {b}, h: {h}, n: {n}, d: {d}, e: {e}, BLOCK: {BLOCK}, NUM_BLOCK: {NUM_BLOCK}, BLOCK_MODEL: {BLOCK_MODEL}")
 
     # print(f"Q: {Q}, K: {K}, V: {V}")
@@ -78,19 +81,14 @@ def fwd_kernel_v0(
     for i in range(NUM_BLOCK):
         # load
 
-        # if i == 0:
-        #     q_off = qk_offset + tl.arange(0, d)[None, :] + off_block[:, None] * d
-        #     print(f"Q offset: {q_off}, Q mask: {off_block[:, None] < n}")
+        if i == i_check:
+            q_off = qk_offset + tl.arange(0, d)[None, :] + off_block[:, None] * d
+            print(f"Q offset: {q_off}, Q mask: {off_block[:, None] < n}")
 
         q = tl.load(  # BLOCK * d
             Q_block_ptr + off_block[:, None] * d, mask=off_block[:, None] < n, other=0.0
         ).to(tl.float32)
 
-        # if i == 0:
-        #     print(f"q_off={Q_block_ptr + off_block[:, None] * d}")
-        #
-        # if tl.program_id(0) == 0 and tl.program_id(1) == 0 and i == 0:
-        #     print(f"q: {q}")
 
         k_trans = tl.load(  # k_trans -> d x BLOCK
             K_trans_block_ptr + off_block[None, :] * d,
@@ -98,33 +96,28 @@ def fwd_kernel_v0(
             other=0.0,
         ).to(tl.float32)
 
-        # if i == 0:
-        #     print(f"K offset: {(qk_offset + tl.arange(0, d)[:, None]) + off_block[None, :] * d}, K mask: {off_block[None, :] < n}")
+        if i == i_check:
+            print(f"K offset: {(qk_offset + tl.arange(0, d)[:, None]) + off_block[None, :] * d}, K mask: {off_block[None, :] < n}")
 
         v = tl.load(
             V_block_ptr + off_block[:, None] * e, mask=off_block[:, None] < n, other=0.0  # BLOCK x BLOCK_MODEL
         ).to(tl.float32)
 
-        # if i == 0:
-        #     print(f"V offset: {(v_offset + e_offset + tl.arange(0, BLOCK_MODEL)[None, :]) + off_block[:, None] * e}, V mask: {off_block[:, None] < n}")
-
-        # if tl.program_id(0) == 0 and tl.program_id(1) == 0 and i == 0:
-        #     print(f"q: {q}, k: {k_trans}, v{v}")
+        if i == i_check:
+            print(f"V offset: {(v_offset + e_offset + tl.arange(0, BLOCK_MODEL)[None, :]) + off_block[:, None] * e}, V mask: {off_block[:, None] < n}")
 
         # compute
         qk = tl.dot(q, k_trans) * diag_decay
         o_intra = tl.dot(qk, v)
         o_inter = tl.dot(q, kv) * q_decay
 
-        # if tl.program_id(0) == 0 and tl.program_id(1) == 0 and i == 0:
-        #     print(f"o_intra {o_intra}, o_inter {o_inter}")
 
         o = o_intra + o_inter
 
         o_off = (o_offset + e_offset + tl.arange(0, BLOCK_MODEL)[None, :]) + off_block[:, None] * e
 
-        # if i == 0:
-        #     print(f"O offset: {o_off}, O mask: {off_block[:, None] < n}")
+        if i == i_check:
+            print(f"O offset: {o_off}, O mask: {off_block[:, None] < n}")
 
         # tl.static_print("fwd_kernel_v0: o_off shape=", o_off.shape)
         # tl.device_print("fwd_kernel_v0 o value: ", o)
