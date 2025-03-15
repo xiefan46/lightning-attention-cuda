@@ -120,7 +120,7 @@ def fwd_kernel_v0(
         o_off = (o_offset + e_offset + tl.arange(0, BLOCK_MODEL)[None, :]) + off_block[:, None] * e
 
         if i == 0:
-            print(f"O offset: {off_block[:, None] * e}, O mask: {off_block[:, None] < n}")
+            print(f"O offset: {o_off}, O mask: {off_block[:, None] < n}")
 
         # tl.static_print("fwd_kernel_v0: o_off shape=", o_off.shape)
         # tl.device_print("fwd_kernel_v0 o value: ", o)
