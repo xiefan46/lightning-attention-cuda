@@ -18,9 +18,9 @@ def fwd_kernel_v1(
         NUM_BLOCK: tl.constexpr,
         BLOCK_MODEL: tl.constexpr,
 ):
-    if tl.program_id(0) != 127 or tl.program_id(1) != 3:
-        return
-    i_check = 15
+    # if tl.program_id(0) != 127 or tl.program_id(1) != 3:
+    #     return
+    # i_check = 15
     # print(f"bx: {tl.program_id(0)}, by: {tl.program_id(1)}")
 
     # print(f"b: {b}, h: {h}, n: {n}, d: {d}, e: {e}, BLOCK: {BLOCK}, NUM_BLOCK: {NUM_BLOCK}, BLOCK_MODEL: {BLOCK_MODEL}")
@@ -78,8 +78,8 @@ def fwd_kernel_v1(
         q_off = q_row_off[:, None] * d + q_col_off[None, :]
 
 
-        if i == i_check:
-            print(f"q_off={qk_offset + q_off}")
+        # if i == i_check:
+        #     print(f"q_off={qk_offset + q_off}")
         q = tl.load(Q + q_off, mask=q_row_mask[:, None], other=0.0).to(tl.float32)
 
         # if tl.program_id(0) == 0 and tl.program_id(1) == 0 and i == 0:
@@ -95,8 +95,8 @@ def fwd_kernel_v1(
         kt_col_off_mask = kt_col_off < n
         kt_off = kt_col_off[None, :] * d + kt_row_off[:, None]
 
-        if i == i_check:
-            print(f"kt_off={qk_offset + kt_off}")
+        # if i == i_check:
+        #     print(f"kt_off={qk_offset + kt_off}")
 
         kt = tl.load(K + kt_off, mask=kt_col_off_mask[None, :], other=0.0).to(tl.float32)
 
@@ -112,8 +112,8 @@ def fwd_kernel_v1(
         v_row_mask = v_row_off < n
         v_off = v_row_off[:, None] * e + v_col_off[None, :]
 
-        if i == i_check:
-            print(f"v_off={vo_offset + v_off}")
+        # if i == i_check:
+        #     print(f"v_off={vo_offset + v_off}")
 
         v = tl.load(V + v_off, mask=v_row_mask[:, None], other=0.0).to(tl.float32)
 
@@ -160,8 +160,8 @@ def fwd_kernel_v1(
         o_row_mask = o_row_off < n
         o_col_mask = o_col_off < e
 
-        if i == i_check:
-            print(f"o_off={vo_offset + o_off}")
+        # if i == i_check:
+        #     print(f"o_off={vo_offset + o_off}")
 
         tl.store(O + o_off, o.to(O.dtype.element_ty), mask=o_row_mask[:, None] & o_col_mask[None, :])
 
