@@ -22,10 +22,10 @@ def fwd_kernel_v0(
     if tl.program_id(0) != 0 or tl.program_id(1) != 0:
         return
 
-    print(f"Q: {Q}, K: {K}, V: {V}")
+    # print(f"Q: {Q}, K: {K}, V: {V}")
 
     q_head_val = tl.load(Q + tl.arange(0, 256)).to(tl.float32)
-    print(f"q_head_val={q_head_val}")
+    # print(f"q_head_val={q_head_val}")
 
     ##### get offset
     off_bh = tl.program_id(0)
@@ -62,8 +62,8 @@ def fwd_kernel_v0(
     s_index = tl.where(index >= 0, -s_index, float("-inf"))  # 下三角矩阵
     diag_decay = tl.exp(s_index)
 
-    if tl.program_id(0) == 0 and tl.program_id(1) == 0:
-        print(f"s_index: {s_index}, diag_decay: {diag_decay}")
+    # if tl.program_id(0) == 0 and tl.program_id(1) == 0:
+    #     print(f"s_index: {s_index}, diag_decay: {diag_decay}")
 
     # print(f"index={index}, slope={s}")
     # print(f"s_index={s_index}")
@@ -73,39 +73,53 @@ def fwd_kernel_v0(
     ##### compute
     for i in range(NUM_BLOCK):
         # load
+
+        if i == 0:
+            print(f"Q offset: {off_block[:, None] * d}, Q mask: {off_block[:, None] < n}")
+
         q = tl.load(  # BLOCK * d
             Q_block_ptr + off_block[:, None] * d, mask=off_block[:, None] < n, other=0.0
         ).to(tl.float32)
 
-        if i == 0:
-            print(f"q_off={Q_block_ptr + off_block[:, None] * d}")
-
-        if tl.program_id(0) == 0 and tl.program_id(1) == 0 and i == 0:
-            print(f"q: {q}")
+        # if i == 0:
+        #     print(f"q_off={Q_block_ptr + off_block[:, None] * d}")
+        #
+        # if tl.program_id(0) == 0 and tl.program_id(1) == 0 and i == 0:
+        #     print(f"q: {q}")
 
         k_trans = tl.load(  # k_trans -> d x BLOCK
             K_trans_block_ptr + off_block[None, :] * d,
             mask=off_block[None, :] < n,
             other=0.0,
         ).to(tl.float32)
+
+        if i == 0:
+            print(f"K offset: {off_block[None, :] * d}, K mask: {off_block[None, :] < n}")
+
         v = tl.load(
             V_block_ptr + off_block[:, None] * e, mask=off_block[:, None] < n, other=0.0  # BLOCK x BLOCK_MODEL
         ).to(tl.float32)
 
-        if tl.program_id(0) == 0 and tl.program_id(1) == 0 and i == 0:
-            print(f"q: {q}, k: {k_trans}, v{v}")
+        if i == 0:
+            print(f"V offset: {off_block[:, None] * e}, V mask: {off_block[:, None] < n}")
+
+        # if tl.program_id(0) == 0 and tl.program_id(1) == 0 and i == 0:
+        #     print(f"q: {q}, k: {k_trans}, v{v}")
 
         # compute
         qk = tl.dot(q, k_trans) * diag_decay
         o_intra = tl.dot(qk, v)
         o_inter = tl.dot(q, kv) * q_decay
 
-        if tl.program_id(0) == 0 and tl.program_id(1) == 0 and i == 0:
-            print(f"o_intra {o_intra}, o_inter {o_inter}")
+        # if tl.program_id(0) == 0 and tl.program_id(1) == 0 and i == 0:
+        #     print(f"o_intra {o_intra}, o_inter {o_inter}")
 
         o = o_intra + o_inter
 
         o_off = O_block_ptr + off_block[:, None] * e
+
+        if i == 0:
+            print(f"O offset: {off_block[:, None] * e}, O mask: {off_block[:, None] < n}")
 
         # tl.static_print("fwd_kernel_v0: o_off shape=", o_off.shape)
         # tl.device_print("fwd_kernel_v0 o value: ", o)

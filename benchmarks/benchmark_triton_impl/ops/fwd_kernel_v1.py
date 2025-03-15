@@ -25,10 +25,10 @@ def fwd_kernel_v1(
     bx = tl.program_id(0)  # bh offset
     by = tl.program_id(1)  # e offset
 
-    print(f"Q: {Q}, K: {K}, V: {V}")
+    # print(f"Q: {Q}, K: {K}, V: {V}")
 
     q_head_val = tl.load(Q + tl.arange(0, 256)).to(tl.float32)
-    print(f"q_head_val={q_head_val}")
+    # print(f"q_head_val={q_head_val}")
 
     # tl.device_print("bx=", bx, " by=", by)
     # print(f"bx={bx}, by={by}")
@@ -61,8 +61,8 @@ def fwd_kernel_v1(
     diag_decay = tl.exp(s_index)  # BLOCK x BLOCK
     # print(f"diag_decay={diag_decay}")
 
-    if tl.program_id(0) == 0 and tl.program_id(1) == 0:
-        print(f"s_index: {s_index}, diag_decay: {diag_decay}")
+    # if tl.program_id(0) == 0 and tl.program_id(1) == 0:
+    #     print(f"s_index: {s_index}, diag_decay: {diag_decay}")
 
     for i in range(NUM_BLOCK):
 
@@ -71,12 +71,14 @@ def fwd_kernel_v1(
         q_col_off = tl.arange(0, d)
         q_row_mask = q_row_off < n
         q_off = q_row_off[:, None] * d + q_col_off[None, :]
+
+
         if i == 0:
-            print(f"q_off={Q + q_off}")
+            print(f"q_off={Q + q_off}, q mask: {q_row_mask[:, None]}")
         q = tl.load(Q + q_off, mask=q_row_mask[:, None], other=0.0).to(tl.float32)
 
-        if tl.program_id(0) == 0 and tl.program_id(1) == 0 and i == 0:
-            print(f"q: {q}")
+        # if tl.program_id(0) == 0 and tl.program_id(1) == 0 and i == 0:
+        #     print(f"q: {q}")
 
         # tl.static_print(f"q shape=", q_off.shape)
 
@@ -87,7 +89,13 @@ def fwd_kernel_v1(
         kt_col_off = tl.arange(0, BLOCK) + i * BLOCK
         kt_col_off_mask = kt_col_off < n
         kt_off = kt_col_off[None, :] * d + kt_row_off[:, None]
+
+        if i == 0:
+            print(f"kt_off={kt_off}, kt mask: {kt_col_off_mask[None, :]}")
+
         kt = tl.load(K + kt_off, mask=kt_col_off_mask[None, :], other=0.0).to(tl.float32)
+
+
 
         # tl.device_print("fwd_kernel_v1 kt: ", kt)
 
@@ -98,11 +106,15 @@ def fwd_kernel_v1(
         v_col_off = tl.arange(0, BLOCK_MODEL) + by * BLOCK_MODEL
         v_row_mask = v_row_off < n
         v_off = v_row_off[:, None] * e + v_col_off[None, :]
+
+        if i == 0:
+            print(f"v_off={v_off}, v mask: {v_row_mask[:, None]}")
+
         v = tl.load(V + v_off, mask=v_row_mask[:, None], other=0.0).to(tl.float32)
 
 
-        if tl.program_id(0) == 0 and tl.program_id(1) == 0 and i == 0:
-            print(f"q: {q}, k: {kt}, v{v}")
+        # if tl.program_id(0) == 0 and tl.program_id(1) == 0 and i == 0:
+        #     print(f"q: {q}, k: {kt}, v{v}")
 
         # tl.device_print("fwd_kernel_v1 v: ", v)
 
@@ -119,8 +131,8 @@ def fwd_kernel_v1(
         # tl.device_print("fwd_kernel_v1 o_inter: ", o_inter)
         # tl.static_print("fwd_kernel_v1: o_inter shape=", o_inter.shape)
 
-        if tl.program_id(0) == 0 and tl.program_id(1) == 0 and i == 0:
-            print(f"o_intra {o_intra}, o_inter {o_inter}")
+        # if tl.program_id(0) == 0 and tl.program_id(1) == 0 and i == 0:
+        #     print(f"o_intra {o_intra}, o_inter {o_inter}")
 
         o = o_intra + o_inter
         #tl.device_print("fwd_kernel_v1 o value: ", o)
@@ -142,6 +154,10 @@ def fwd_kernel_v1(
         # tl.device_print("fwd_kernel_v1 o value: ", o)
         o_row_mask = o_row_off < n
         o_col_mask = o_col_off < e
+
+        if i == 0:
+            print(f"o_off={o_off}, o mask: {o_row_mask[:, None] & o_col_mask[None, :]}")
+
         tl.store(O + o_off, o.to(O.dtype.element_ty), mask=o_row_mask[:, None] & o_col_mask[None, :])
 
     # tl.device_print("bx=", bx, " by=", by, " finished!")
