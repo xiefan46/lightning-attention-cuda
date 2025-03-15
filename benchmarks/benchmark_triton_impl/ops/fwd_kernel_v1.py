@@ -27,7 +27,7 @@ def fwd_kernel_v1(
 
     # print(f"Q: {Q}, K: {K}, V: {V}")
 
-    q_head_val = tl.load(Q + tl.arange(0, 256)).to(tl.float32)
+    # q_head_val = tl.load(Q + tl.arange(0, 256)).to(tl.float32)
     # print(f"q_head_val={q_head_val}")
 
     # tl.device_print("bx=", bx, " by=", by)
@@ -74,7 +74,7 @@ def fwd_kernel_v1(
 
 
         if i == 0:
-            print(f"q_off={Q + q_off}, q mask: {q_row_mask[:, None]}")
+            print(f"q_off={q_off}, q mask: {q_row_mask[:, None]}")
         q = tl.load(Q + q_off, mask=q_row_mask[:, None], other=0.0).to(tl.float32)
 
         # if tl.program_id(0) == 0 and tl.program_id(1) == 0 and i == 0:
