@@ -142,13 +142,13 @@ def fwd_kernel_v1(
         # tl.static_print(f"v shape=", v.shape)
 
         # compute intra block
-        qk = tl.dot(q, kt) * diag_decay  # BLOCK x BLOCK
-        o_intra = tl.dot(qk, v)  # o_intra = qkv, size: BLOCK x BLOCK_MODEL
+        qk = tl.dot(q, kt)  # BLOCK x BLOCK
+        o_intra = tl.dot(qk * diag_decay, v)  # o_intra = qkv, size: BLOCK x BLOCK_MODEL
         #tl.static_print("fwd_kernel_v1: o_intra shape=", o_intra.shape)
         # tl.device_print("fwd_kernel_v1 o_intra: ", o_intra)
         # compute inter block
 
-        o_inter = tl.dot(q, kv) * q_decay # BLOCK x BLOCK_MODEL
+        o_inter = tl.dot(q * q_decay, kv) # BLOCK x BLOCK_MODEL
         # tl.device_print("fwd_kernel_v1 o_inter: ", o_inter)
         # tl.static_print("fwd_kernel_v1: o_inter shape=", o_inter.shape)
 
