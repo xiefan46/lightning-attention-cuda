@@ -47,9 +47,9 @@ def fwd_kernel_v1(
     h_id = bx % h
 
     O_block_ptr = O + vo_offset + by * BLOCK_MODEL + tl.arange(0, BLOCK_MODEL)[None, :]
-    off_block = tl.arange(
-        0, BLOCK
-    )
+    # off_block = tl.arange(
+    #     0, BLOCK
+    # )
 
     O_origin = O
 
@@ -81,16 +81,16 @@ def fwd_kernel_v1(
     # if tl.program_id(0) == 0 and tl.program_id(1) == 0:
     #     print(f"s_index: {s_index}, diag_decay: {diag_decay}")
 
-    off_block = tl.arange(0, BLOCK)
+    # off_block = tl.arange(0, BLOCK)
 
     for i in range(NUM_BLOCK):
 
         # load q, size: BLOCK x d
-        # q_row_off = tl.arange(0, BLOCK) + i * BLOCK
-        q_row_off = off_block
+        q_row_off = tl.arange(0, BLOCK) + i * BLOCK
+        # q_row_off = off_block
         q_col_off = tl.arange(0, d)
         q_row_mask = q_row_off < n
-        q_off = off_block[:, None] * d + q_col_off[None, :]
+        q_off = q_row_off[:, None] * d + q_col_off[None, :]
 
 
         # if i == i_check:
@@ -106,8 +106,8 @@ def fwd_kernel_v1(
 
         # load k^T size: d x BLOCK
         kt_row_off = tl.arange(0, d)
-        # kt_col_off = tl.arange(0, BLOCK) + i * BLOCK
-        kt_col_off = off_block
+        kt_col_off = tl.arange(0, BLOCK) + i * BLOCK
+        # kt_col_off = off_block
         kt_col_off_mask = kt_col_off < n
         kt_off = kt_col_off[None, :] * d + kt_row_off[:, None]
 
@@ -123,7 +123,7 @@ def fwd_kernel_v1(
         # tl.static_print(f"kt shape=", kt_off.shape)
 
         # load V size BLOCK x BLOCK_MODEL
-        v_row_off = off_block
+        v_row_off = tl.arange(0, BLOCK) + i * BLOCK
         v_col_off = tl.arange(0, BLOCK_MODEL) + by * BLOCK_MODEL
         v_row_mask = v_row_off < n
         v_off = v_row_off[:, None] * e + v_col_off[None, :]
@@ -184,7 +184,8 @@ def fwd_kernel_v1(
         # copy from v0
         # o_off = (o_offset + e_offset + tl.arange(0, BLOCK_MODEL)[None, :]) + off_block[:, None] * e
 
-        o_off = off_block[:, None] * e + (tl.arange(0, BLOCK_MODEL)[None, :] + by * BLOCK_MODEL)
+        o_row_off = tl.arange(0, BLOCK) + BLOCK * i
+        o_off = o_row_off[:, None] * e + (tl.arange(0, BLOCK_MODEL)[None, :] + by * BLOCK_MODEL)
 
         # tl.static_print("fwd_kernel_v0: o_off shape=", o_off.shape)
         # tl.device_print("fwd_kernel_v0 o value: ", o)
@@ -195,9 +196,9 @@ def fwd_kernel_v1(
         tl.store(
             O + o_off,
             o.to(O_block_ptr.dtype.element_ty),
-            mask=off_block[:, None] < n,
+            mask=o_row_off[:, None] < n,
         )
-        off_block += BLOCK
+        # off_block += BLOCK
         # end of copy from v0
 
     # tl.device_print("bx=", bx, " by=", by, " finished!")
