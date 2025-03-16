@@ -33,7 +33,7 @@ def lightning_attn2(q, k, v, s, kernel_impl):
 
     o_padded = torch.empty((b, h, n, e_padded), dtype=q.dtype, device=q.device)
 
-    BLOCK = 128
+    BLOCK = 16
     NUM_BLOCK = triton.cdiv(q.shape[2], BLOCK)
     # parallel over channel
     BLOCK_MODEL = min(triton.next_power_of_2(e_padded), 32)
