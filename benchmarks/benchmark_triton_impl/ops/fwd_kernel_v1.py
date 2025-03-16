@@ -71,7 +71,8 @@ def fwd_kernel_v1(
         qk = tl.dot(q, kt)  # BLOCK x BLOCK
         o_intra = tl.dot(qk * diag_decay, v)   # o_intra = qkv, size: BLOCK x BLOCK_MODEL
 
-        q_with_decay = q * q_decay
+        q_decay_broadcast = tl.broadcast_to(q_decay, (BLOCK, d))
+        q_with_decay = q * q_decay_broadcast
         o_inter = tl.dot(q_with_decay, kv) # BLOCK x BLOCK_MODEL
 
         o = o_intra + o_inter
