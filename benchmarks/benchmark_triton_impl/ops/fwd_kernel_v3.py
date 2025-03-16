@@ -60,7 +60,7 @@ def fwd_kernel_v3(
 
         tl.store(O_start + vo_off, o.to(O.dtype.element_ty), mask=block_off[:, None] < n)
 
-        new_kv = tl.dot(k_t, v) * k_decay
+        new_kv = tl.dot(k_t * k_decay, v)
         kv = kv * block_decay + new_kv
 
         block_off += BLOCK
