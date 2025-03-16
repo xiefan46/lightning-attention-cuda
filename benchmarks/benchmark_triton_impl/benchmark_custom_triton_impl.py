@@ -82,10 +82,10 @@ def get_benchmark():
             x_vals=[list(_) for _ in configs],
             line_arg="provider",
             # "MiniMax-Text-01",
-            line_vals=["kernel_v3", "kernel_v0"],
+            line_vals=["kernel_v0", "kernel_v3"],
             line_names=[
-                "kernel_v3",
                 "kernel_v0",
+                "kernel_v3",
             ],
             styles=[("blue", "-"), ("green", "-")],
             ylabel="us",

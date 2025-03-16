@@ -54,13 +54,13 @@ def fwd_kernel_v3(
         vo_off = block_off[:, None] * e
         v = tl.load(V_start + vo_off, mask=block_off[:, None] < n, other=0.0).to(tl.float32)
 
-        o_intra = tl.dot(tl.dot(q, k_t) * diag_decay, v)
-        o_inter = tl.dot(q * q_decay, kv)
+        o_intra = tl.dot(tl.dot(q, k_t), v) * diag_decay
+        o_inter = tl.dot(q, kv) * q_decay
         o = o_intra + o_inter
 
         tl.store(O_start + vo_off, o.to(O.dtype.element_ty), mask=block_off[:, None] < n)
 
-        new_kv = tl.dot(k_t * k_decay, v)
+        new_kv = tl.dot(k_t, v) * k_decay
         kv = kv * block_decay + new_kv
 
         block_off += BLOCK

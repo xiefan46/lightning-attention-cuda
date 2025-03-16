@@ -57,22 +57,17 @@ def fwd_kernel_v0(
     ##### compute
     for i in range(NUM_BLOCK):
         # load
-
         q = tl.load(  # BLOCK * d
             Q_block_ptr + off_block[:, None] * d, mask=off_block[:, None] < n, other=0.0
         ).to(tl.float32)
-
-
         k_trans = tl.load(  # k_trans -> d x BLOCK
             K_trans_block_ptr + off_block[None, :] * d,
             mask=off_block[None, :] < n,
             other=0.0,
         ).to(tl.float32)
-
         v = tl.load(
             V_block_ptr + off_block[:, None] * e, mask=off_block[:, None] < n, other=0.0  # BLOCK x BLOCK_MODEL
         ).to(tl.float32)
-
         # compute
         qk = tl.dot(q, k_trans) * diag_decay
         o_intra = tl.dot(qk, v)
