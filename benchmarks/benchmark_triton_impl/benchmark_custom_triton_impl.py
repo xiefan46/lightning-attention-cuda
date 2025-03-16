@@ -49,6 +49,9 @@ def test_lightning_attention_implementations(model_params):
     for kernel_impl in [fwd_kernel_v2]:
         print(f"Check correctness of kernel: {kernel_impl.__name__}")
         lib_output = lightning_attn_func(q, k, v, slope_rate, kernel_impl)
+
+        print(f"Finish kernel launch: {kernel_impl.__name__}")
+
         lib_output = lib_output.transpose(1, 2).contiguous()
         lib_output = lib_output.view(batch_size, seq_len, -1)
         lib_output = model_attn.norm(lib_output)
