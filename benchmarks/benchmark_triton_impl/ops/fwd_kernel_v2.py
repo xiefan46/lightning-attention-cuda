@@ -21,7 +21,7 @@ def fwd_kernel_v2(
     bx = tl.program_id(0)
     by = tl.program_id(1)
 
-    O += bx * n * d
+    Q += bx * n * d
     K += bx * n * d
     V += (bx * n * e + by * BLOCK_MODEL)
     O += (bx * n * e + by * BLOCK_MODEL)
