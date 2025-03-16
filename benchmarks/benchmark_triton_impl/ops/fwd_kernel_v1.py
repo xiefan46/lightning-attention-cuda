@@ -23,9 +23,9 @@ def fwd_kernel_v1(
     # i_check = 15
     # print(f"bx: {tl.program_id(0)}, by: {tl.program_id(1)}")
 
-    print(f"b: {b}, h: {h}, n: {n}, d: {d}, e: {e}, BLOCK: {BLOCK}, NUM_BLOCK: {NUM_BLOCK}, BLOCK_MODEL: {BLOCK_MODEL}")
+    # print(f"b: {b}, h: {h}, n: {n}, d: {d}, e: {e}, BLOCK: {BLOCK}, NUM_BLOCK: {NUM_BLOCK}, BLOCK_MODEL: {BLOCK_MODEL}")
     # b = 2, h = 96,
-    tl.static_print("b=", b, " h=", h, " n=", n, " d=", d, " e=", e, " BLOCK=", BLOCK, " NUM_BLOCK=", NUM_BLOCK, " BLOCK_MODEL=", BLOCK_MODEL)
+    # tl.static_print("b=", b, " h=", h, " n=", n, " d=", d, " e=", e, " BLOCK=", BLOCK, " NUM_BLOCK=", NUM_BLOCK, " BLOCK_MODEL=", BLOCK_MODEL)
     bx = tl.program_id(0)  # bh offset
     by = tl.program_id(1)  # e offset
 
@@ -123,7 +123,7 @@ def fwd_kernel_v1(
         # tl.static_print(f"kt shape=", kt_off.shape)
 
         # load V size BLOCK x BLOCK_MODEL
-        v_row_off = tl.arange(0, BLOCK) + i * BLOCK
+        v_row_off = off_block
         v_col_off = tl.arange(0, BLOCK_MODEL) + by * BLOCK_MODEL
         v_row_mask = v_row_off < n
         v_off = v_row_off[:, None] * e + v_col_off[None, :]
@@ -142,13 +142,13 @@ def fwd_kernel_v1(
         # tl.static_print(f"v shape=", v.shape)
 
         # compute intra block
-        qk = tl.dot(q, kt)  # BLOCK x BLOCK
-        o_intra = tl.dot(qk * diag_decay, v)  # o_intra = qkv, size: BLOCK x BLOCK_MODEL
+        qk = tl.dot(q, kt) * diag_decay  # BLOCK x BLOCK
+        o_intra = tl.dot(qk, v)  # o_intra = qkv, size: BLOCK x BLOCK_MODEL
         #tl.static_print("fwd_kernel_v1: o_intra shape=", o_intra.shape)
         # tl.device_print("fwd_kernel_v1 o_intra: ", o_intra)
         # compute inter block
 
-        o_inter = tl.dot(q * q_decay, kv) # BLOCK x BLOCK_MODEL
+        o_inter = tl.dot(q, kv) * q_decay # BLOCK x BLOCK_MODEL
         # tl.device_print("fwd_kernel_v1 o_inter: ", o_inter)
         # tl.static_print("fwd_kernel_v1: o_inter shape=", o_inter.shape)
 
