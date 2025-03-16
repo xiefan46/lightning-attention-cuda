@@ -34,7 +34,7 @@ def fwd_kernel_v1(
 
     # calculate decay
     slope = tl.load(S + h_id).to(tl.float32)
-    q_decay = tl.exp((-slope * tl.arange(0, BLOCK))[:, None])  # BLOCK x 1
+    q_decay = tl.exp((-slope * tl.arange(0, BLOCK)))[:, None]  # BLOCK x 1
     k_pe = BLOCK - tl.arange(0, BLOCK)
     k_decay = tl.exp(-slope * k_pe[None, :])  # 1 x BLOCK
     block_decay = tl.exp(-slope * BLOCK)
