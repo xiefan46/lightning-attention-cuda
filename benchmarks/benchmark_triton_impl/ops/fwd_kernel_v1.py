@@ -85,7 +85,7 @@ def fwd_kernel_v1(
 
         tl.store(
             O + o_off,
-            o.to(O_block_ptr.dtype.element_ty),
+            o.to(O.dtype.element_ty),
             mask=o_row_off[:, None] < n,
         )
 
