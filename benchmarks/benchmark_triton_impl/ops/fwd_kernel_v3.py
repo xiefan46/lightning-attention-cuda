@@ -3,7 +3,7 @@ import triton.language as tl
 
 
 @triton.jit
-def fwd_kernel_v2(
+def fwd_kernel_v3(
         Q,
         K,
         V,
@@ -21,14 +21,11 @@ def fwd_kernel_v2(
     bx = tl.program_id(0)
     by = tl.program_id(1)
 
-    Q += bx * n * d
-    K += bx * n * d
-    V += bx * n * e
-    O += bx * n * e
-
     block_off = tl.arange(0, BLOCK)
     qk_dim_off = tl.arange(0, d)
     vo_dim_off = tl.arange(0, BLOCK_MODEL) + by * BLOCK_MODEL
+    k_row_off = tl.arange(0, d)
+
 
     # decay
     head_off = bx % h
@@ -44,23 +41,25 @@ def fwd_kernel_v2(
 
     kv = tl.zeros((d, BLOCK_MODEL), dtype=tl.float32)
 
+    Q_start =  Q + bx * n * d + qk_dim_off[None, :]
+    K_start =  K + bx * n * d + k_row_off[:, None]
+    V_start = V + bx * n * e + vo_dim_off[None, :]
+    O_start = O + bx * n * e + vo_dim_off[None, :]
+
     for i in range(NUM_BLOCK):
-        q_off = block_off[:, None] * d + qk_dim_off[None, :]
-        q = tl.load(Q + q_off, mask=block_off[:, None] < n, other=0.0).to(tl.float32)
+        qk_off = block_off[:, None] * d
+        q = tl.load(Q_start + qk_off, mask=block_off[:, None] < n, other=0.0).to(tl.float32)
 
-        k_row_off = tl.arange(0, d)
-        k_off = k_row_off[:, None] + block_off[None, :] * d
-        k_t = tl.load(K + k_off, mask=block_off[None, :] < n, other=0.0).to(tl.float32)
+        k_t = tl.load(K_start + qk_off, mask=block_off[None, :] < n, other=0.0).to(tl.float32)
 
-        v_off = block_off[:, None] * e + vo_dim_off[None, :]
-        v = tl.load(V + v_off, mask=block_off[:, None] < n, other=0.0).to(tl.float32)
+        vo_off = block_off[:, None] * e
+        v = tl.load(V_start + vo_off, mask=block_off[:, None] < n, other=0.0).to(tl.float32)
 
         o_intra = tl.dot(tl.dot(q, k_t) * diag_decay, v)
         o_inter = tl.dot(q * q_decay, kv)
         o = o_intra + o_inter
 
-        o_off = block_off[:, None] * e + vo_dim_off[None, :]
-        tl.store(O + o_off, o.to(O.dtype.element_ty), mask=block_off[:, None] < n)
+        tl.store(O_start + vo_off, o.to(O.dtype.element_ty), mask=block_off[:, None] < n)
 
         new_kv = tl.dot(k_t * k_decay, v)
         kv = kv * block_decay + new_kv

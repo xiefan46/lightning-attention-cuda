@@ -6,6 +6,7 @@ from benchmarks.benchmark_triton_impl.model.lightning_attention_triton import li
 from benchmarks.benchmark_triton_impl.ops.fwd_kernel_v2 import fwd_kernel_v2
 from benchmarks.benchmark_triton_impl.ops.fwd_kernel_v0 import fwd_kernel_v0
 from benchmarks.benchmark_triton_impl.ops.fwd_kernel_v1 import fwd_kernel_v1
+from benchmarks.benchmark_triton_impl.ops.fwd_kernel_v3 import fwd_kernel_v3
 from benchmarks.benchmark_triton_impl.util import _build_slope_tensor
 import triton
 import triton.language as tl
@@ -47,7 +48,7 @@ def test_lightning_attention_implementations(model_params):
     k = k.transpose(1, 2)
     v = v.transpose(1, 2)
 
-    for kernel_impl in [fwd_kernel_v0, fwd_kernel_v1, fwd_kernel_v2]:
+    for kernel_impl in [fwd_kernel_v0, fwd_kernel_v1, fwd_kernel_v2, fwd_kernel_v3]:
         print(f"Check correctness of kernel: {kernel_impl.__name__}")
         lib_output = lightning_attn_func(q, k, v, slope_rate, kernel_impl)
 
@@ -81,10 +82,10 @@ def get_benchmark():
             x_vals=[list(_) for _ in configs],
             line_arg="provider",
             # "MiniMax-Text-01",
-            line_vals=["kernel_v0", "kernel_v2"],
+            line_vals=["kernel_v0", "kernel_v3"],
             line_names=[
                 "kernel_v0",
-                "kernel_v2",
+                "kernel_v3",
             ],
             styles=[("blue", "-"), ("green", "-")],
             ylabel="us",
@@ -129,6 +130,8 @@ def get_benchmark():
                 kernel_impl = fwd_kernel_v1
             elif provider == "kernel_v2":
                 kernel_impl = fwd_kernel_v2
+            elif provider == "kernel_v3":
+                kernel_impl = fwd_kernel_v3
             else:
                 raise ValueError("Unknown provider")
 
