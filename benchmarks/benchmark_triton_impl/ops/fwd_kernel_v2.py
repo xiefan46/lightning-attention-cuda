@@ -23,12 +23,12 @@ def fwd_kernel_v2(
 
     Q += bx * n * d
     K += bx * n * d
-    V += (bx * n * e + by * BLOCK_MODEL)
-    O += (bx * n * e + by * BLOCK_MODEL)
+    V += bx * n * e
+    O += bx * n * e
 
     block_off = tl.arange(0, BLOCK)
     qk_dim_off = tl.arange(0, d)
-    vo_dim_off = tl.arange(0, BLOCK_MODEL)
+    vo_dim_off = tl.arange(0, BLOCK_MODEL) + by * BLOCK_MODEL
 
     # decay
     head_off = bx % h

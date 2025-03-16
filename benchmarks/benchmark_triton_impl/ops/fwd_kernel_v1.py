@@ -23,8 +23,6 @@ def fwd_kernel_v1(
     qk_offset = bx * n * d
     vo_offset = bx * n * e
     h_id = bx % h
-
-    O_block_ptr = O + vo_offset + by * BLOCK_MODEL + tl.arange(0, BLOCK_MODEL)[None, :]
     Q += qk_offset
     K += qk_offset
     V += vo_offset
