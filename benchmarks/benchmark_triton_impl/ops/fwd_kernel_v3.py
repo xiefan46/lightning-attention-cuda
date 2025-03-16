@@ -26,7 +26,6 @@ def fwd_kernel_v3(
     vo_dim_off = tl.arange(0, BLOCK_MODEL) + by * BLOCK_MODEL
     k_row_off = tl.arange(0, d)
 
-
     # decay
     head_off = bx % h
     slope = tl.load(S + head_off).to(tl.float32)
@@ -38,11 +37,10 @@ def fwd_kernel_v3(
     s_index = tl.where(index >= 0, s_index, float("-inf"))
     diag_decay = tl.exp(s_index)
 
-
     kv = tl.zeros((d, BLOCK_MODEL), dtype=tl.float32)
 
-    Q_start =  Q + bx * n * d + qk_dim_off[None, :]
-    K_start =  K + bx * n * d + k_row_off[:, None]
+    Q_start = Q + bx * n * d + qk_dim_off[None, :]
+    K_start = K + bx * n * d + k_row_off[:, None]
     V_start = V + bx * n * e + vo_dim_off[None, :]
     O_start = O + bx * n * e + vo_dim_off[None, :]
 
@@ -50,7 +48,7 @@ def fwd_kernel_v3(
         q_off = block_off[:, None] * d
         q = tl.load(Q_start + q_off, mask=block_off[:, None] < n, other=0.0).to(tl.float32)
 
-        k_off = q_off[None, :]
+        k_off = block_off[None, :] * d
         k_t = tl.load(K_start + k_off, mask=block_off[None, :] < n, other=0.0).to(tl.float32)
 
         vo_off = block_off[:, None] * e
