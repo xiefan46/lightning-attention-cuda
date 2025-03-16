@@ -42,7 +42,7 @@ def lightning_attn2(q, k, v, s, kernel_impl):
 
     grid = (b * h, triton.cdiv(e_padded, BLOCK_MODEL))
 
-    print(f"kernel_impl={kernel_impl}, grid: {grid}")
+    # print(f"kernel_impl={kernel_impl}, grid: {grid}")
 
     kernel_impl[grid](
         q_padded,
