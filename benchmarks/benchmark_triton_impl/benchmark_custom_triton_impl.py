@@ -80,9 +80,9 @@ def get_benchmark():
             x_names=["batch_size", "seq_len"],
             x_vals=[list(_) for _ in configs],
             line_arg="provider",
-            line_vals=["MiniMax-Text-01", "kernel_v0", "kernel_v2"],
+            # "MiniMax-Text-01",
+            line_vals=["kernel_v0", "kernel_v2"],
             line_names=[
-                "MiniMax-Text-01 Model Implementation",
                 "kernel_v0",
                 "kernel_v2",
             ],
