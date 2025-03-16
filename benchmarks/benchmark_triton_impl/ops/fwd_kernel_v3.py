@@ -47,10 +47,11 @@ def fwd_kernel_v3(
     O_start = O + bx * n * e + vo_dim_off[None, :]
 
     for i in range(NUM_BLOCK):
-        qk_off = block_off[:, None] * d
-        q = tl.load(Q_start + qk_off, mask=block_off[:, None] < n, other=0.0).to(tl.float32)
+        q_off = block_off[:, None] * d
+        q = tl.load(Q_start + q_off, mask=block_off[:, None] < n, other=0.0).to(tl.float32)
 
-        k_t = tl.load(K_start + qk_off, mask=block_off[None, :] < n, other=0.0).to(tl.float32)
+        k_off = q_off[None, :]
+        k_t = tl.load(K_start + k_off, mask=block_off[None, :] < n, other=0.0).to(tl.float32)
 
         vo_off = block_off[:, None] * e
         v = tl.load(V_start + vo_off, mask=block_off[:, None] < n, other=0.0).to(tl.float32)
