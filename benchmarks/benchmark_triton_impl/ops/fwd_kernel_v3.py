@@ -25,7 +25,6 @@ def fwd_kernel_v3(
     qk_dim_off = tl.arange(0, d)
     vo_dim_off = tl.arange(0, BLOCK_MODEL) + by * BLOCK_MODEL
     k_row_off = tl.arange(0, d)
-
     # decay
     head_off = bx % h
     slope = tl.load(S + head_off).to(tl.float32)
