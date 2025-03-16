@@ -3,7 +3,7 @@ import torch
 
 from benchmarks.benchmark_triton_impl.model.lightning_attention_pytorch import MiniMaxText01LightningAttention
 from benchmarks.benchmark_triton_impl.model.lightning_attention_triton import lightning_attn_func
-from benchmarks.benchmark_triton_impl.ops import fwd_kernel_v2
+from benchmarks.benchmark_triton_impl.ops.fwd_kernel_v2 import fwd_kernel_v2
 from benchmarks.benchmark_triton_impl.ops.fwd_kernel_v0 import fwd_kernel_v0
 from benchmarks.benchmark_triton_impl.ops.fwd_kernel_v1 import fwd_kernel_v1
 from benchmarks.benchmark_triton_impl.util import _build_slope_tensor
