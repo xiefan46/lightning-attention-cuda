@@ -71,8 +71,8 @@ def test_lightning_attention_implementations(model_params):
 
 
 def get_benchmark():
-    batch_size_range = [2 ** i for i in range(0, 7)]  # max 64
-    seq_length_range = [256, 512, 1024, 2048]  # max 4096
+    batch_size_range = [2 ** i for i in range(0, 6)]  # max 32
+    seq_length_range = [256, 512, 1024]
     configs = list(itertools.product(batch_size_range, seq_length_range))
 
     @triton.testing.perf_report(
@@ -80,11 +80,10 @@ def get_benchmark():
             x_names=["batch_size", "seq_len"],
             x_vals=[list(_) for _ in configs],
             line_arg="provider",
-            line_vals=["MiniMax-Text-01", "kernel_v0", "kernel_v1", "kernel_v2"],
+            line_vals=["MiniMax-Text-01", "kernel_v0", "kernel_v2"],
             line_names=[
                 "MiniMax-Text-01 Model Implementation",
                 "kernel_v0",
-                "kernel_v1",
                 "kernel_v2",
             ],
             styles=[("blue", "-"), ("green", "-")],
