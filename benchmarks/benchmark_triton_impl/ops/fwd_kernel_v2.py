@@ -44,8 +44,11 @@ def fwd_kernel_v2(
     # diag decay
     index = block_off[:, None] - block_off[None, :]  # 相对位置 BLOCK x BLOCK
     s_index = -slope * index  # BLOCK * BLOCK
-    s_index = tl.where(index >= 0, s_index, float("-inf"))  # 下三角矩阵
-    diag_decay = tl.exp(s_index)
+    s_index = tl.exp(s_index)
+    s_index = tl.where(index >= 0, s_index, float("-inf"))
+    diag_decay = s_index
+    # s_index = tl.where(index >= 0, s_index, float("-inf"))  # 下三角矩阵
+    # diag_decay = tl.exp(s_index)
 
     kv = tl.zeros((d, BLOCK_MODEL), dtype=tl.float32)
 
