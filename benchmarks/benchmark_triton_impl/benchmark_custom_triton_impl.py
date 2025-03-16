@@ -71,8 +71,8 @@ def test_lightning_attention_implementations(model_params):
 
 
 def get_benchmark():
-    batch_size_range = [2 ** i for i in range(0, 6)]  # max 32
-    seq_length_range = [256, 512, 1024]
+    batch_size_range = [2 ** i for i in range(0, 7)]  # max 64
+    seq_length_range = [256, 512]
     configs = list(itertools.product(batch_size_range, seq_length_range))
 
     @triton.testing.perf_report(
@@ -129,6 +129,8 @@ def get_benchmark():
                 kernel_impl = fwd_kernel_v1
             elif provider == "kernel_v2":
                 kernel_impl = fwd_kernel_v2
+            else:
+                raise ValueError("Unknown provider")
 
             def run_lib():
                 qkv = model_attn.act(model_attn.qkv_proj(hidden_states))
