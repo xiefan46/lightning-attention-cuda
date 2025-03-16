@@ -109,7 +109,7 @@ def fwd_kernel_v0(
         # compute
         qk = tl.dot(q, k_trans) * diag_decay
         o_intra = tl.dot(qk, v)
-        o_inter = tl.dot(q, kv) * q_decay
+        o_inter = tl.dot(q * q_decay, kv)
 
 
         o = o_intra + o_inter

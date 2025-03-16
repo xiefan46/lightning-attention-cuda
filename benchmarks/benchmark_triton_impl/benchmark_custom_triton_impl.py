@@ -45,7 +45,7 @@ def test_lightning_attention_implementations(model_params):
     k = k.transpose(1, 2)
     v = v.transpose(1, 2)
 
-    for kernel_impl in [fwd_kernel_v1]:
+    for kernel_impl in [fwd_kernel_v0]:
         print(f"Check correctness of kernel: {kernel_impl.__name__}")
         lib_output = lightning_attn_func(q, k, v, slope_rate, kernel_impl)
         lib_output = lib_output.transpose(1, 2).contiguous()
