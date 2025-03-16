@@ -49,7 +49,7 @@ def fwd_kernel_v2(
 
         k_row_off = tl.arange(0, d)
         k_off = k_row_off[:, None] + block_off[None, :] * d
-        k_t = tl.load(K + k_off, mask=(block_off[None, :] * d) < n, other=0.0).to(tl.float32)
+        k_t = tl.load(K + k_off, mask=block_off[None, :] < n, other=0.0).to(tl.float32)
 
         v_off = block_off[:, None] * e + vo_dim_off[None, :]
         v = tl.load(V + v_off, mask=block_off[:, None] < n, other=0.0).to(tl.float32)
