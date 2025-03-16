@@ -12,7 +12,7 @@ def test_lightning_attention_implementations(model_params):
     torch.manual_seed(42)
 
     batch_size = 2
-    seq_len = 64
+    seq_len = 128
     dtype = torch.bfloat16
     # dtype = torch.float32
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
