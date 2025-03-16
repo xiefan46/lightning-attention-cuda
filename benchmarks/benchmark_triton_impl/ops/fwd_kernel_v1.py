@@ -1,7 +1,6 @@
 import triton
 import triton.language as tl
 
-# TODO: 精度要怎么处理
 @triton.jit
 def fwd_kernel_v1(
         Q,

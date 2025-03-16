@@ -3,6 +3,7 @@ import torch
 
 from benchmarks.benchmark_triton_impl.model.lightning_attention_pytorch import MiniMaxText01LightningAttention
 from benchmarks.benchmark_triton_impl.model.lightning_attention_triton import lightning_attn_func
+from benchmarks.benchmark_triton_impl.ops import fwd_kernel_v2
 from benchmarks.benchmark_triton_impl.ops.fwd_kernel_v0 import fwd_kernel_v0
 from benchmarks.benchmark_triton_impl.ops.fwd_kernel_v1 import fwd_kernel_v1
 from benchmarks.benchmark_triton_impl.util import _build_slope_tensor
@@ -45,7 +46,7 @@ def test_lightning_attention_implementations(model_params):
     k = k.transpose(1, 2)
     v = v.transpose(1, 2)
 
-    for kernel_impl in [fwd_kernel_v1]:
+    for kernel_impl in [fwd_kernel_v2]:
         print(f"Check correctness of kernel: {kernel_impl.__name__}")
         lib_output = lightning_attn_func(q, k, v, slope_rate, kernel_impl)
         lib_output = lib_output.transpose(1, 2).contiguous()
