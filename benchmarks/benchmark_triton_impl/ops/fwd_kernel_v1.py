@@ -18,48 +18,18 @@ def fwd_kernel_v1(
         NUM_BLOCK: tl.constexpr,
         BLOCK_MODEL: tl.constexpr,
 ):
-    # if tl.program_id(0) != 0 or tl.program_id(1) != 0:
-    #     return
-    # i_check = 15
-    # print(f"bx: {tl.program_id(0)}, by: {tl.program_id(1)}")
-
-    # print(f"b: {b}, h: {h}, n: {n}, d: {d}, e: {e}, BLOCK: {BLOCK}, NUM_BLOCK: {NUM_BLOCK}, BLOCK_MODEL: {BLOCK_MODEL}")
-    # b = 2, h = 96,
-    # tl.static_print("b=", b, " h=", h, " n=", n, " d=", d, " e=", e, " BLOCK=", BLOCK, " NUM_BLOCK=", NUM_BLOCK, " BLOCK_MODEL=", BLOCK_MODEL)
     bx = tl.program_id(0)  # bh offset
     by = tl.program_id(1)  # e offset
-
-    # print(f"Q: {Q}, K: {K}, V: {V}")
-
-    # q_head_val = tl.load(Q + tl.arange(0, 256)).to(tl.float32)
-    # print(f"q_head_val={q_head_val}")
-
-    # tl.device_print("bx=", bx, " by=", by)
-    # print(f"bx={bx}, by={by}")
-
-    off_bh = tl.program_id(0)
-    off_e = tl.program_id(1)
-    o_offset = off_bh * n * e
-    e_offset = off_e * BLOCK_MODEL
 
     qk_offset = bx * n * d
     vo_offset = bx * n * e
     h_id = bx % h
 
     O_block_ptr = O + vo_offset + by * BLOCK_MODEL + tl.arange(0, BLOCK_MODEL)[None, :]
-    # off_block = tl.arange(
-    #     0, BLOCK
-    # )
-
-    O_origin = O
-
     Q += qk_offset
     K += qk_offset
     V += vo_offset
     O += vo_offset
-
-    # tl.device_print("fwd_kernel_v1 q: ", Q)
-
     kv = tl.zeros((d, BLOCK_MODEL), dtype=tl.float32) # [d, BLOCK_MODEL]
 
     # calculate decay
@@ -71,18 +41,7 @@ def fwd_kernel_v1(
     index = tl.arange(0, BLOCK)[:, None] - tl.arange(0, BLOCK)[None, :]
     s_index = slope * index
     s_index = tl.where(index >= 0, -s_index, float("-inf"))
-    # tl.static_print("s_index shape=", s_index.shape)
-    # print(f"index={index}, slope={slope}")
-    # print(f"s_index={s_index}")
-
     diag_decay = tl.exp(s_index)  # BLOCK x BLOCK
-    # print(f"diag_decay={diag_decay}")
-
-    # if tl.program_id(0) == 0 and tl.program_id(1) == 0:
-    #     print(f"s_index: {s_index}, diag_decay: {diag_decay}")
-
-    # off_block = tl.arange(0, BLOCK)
-
     for i in range(NUM_BLOCK):
 
         # load q, size: BLOCK x d
@@ -91,36 +50,15 @@ def fwd_kernel_v1(
         q_col_off = tl.arange(0, d)
         q_row_mask = q_row_off < n
         q_off = q_row_off[:, None] * d + q_col_off[None, :]
-
-
-        # if i == i_check:
-        #     print(f"q_off={qk_offset + q_off}")
         q = tl.load(Q + q_off, mask=q_row_mask[:, None], other=0.0).to(tl.float32)
 
-        # if tl.program_id(0) == 0 and tl.program_id(1) == 0 and i == 0:
-        #     print(f"q: {q}")
-
-        # tl.static_print(f"q shape=", q_off.shape)
-
-        # tl.device_print("fwd_kernel_v1 q: ", q)
-
-        # load k^T size: d x BLOCK
         kt_row_off = tl.arange(0, d)
         kt_col_off = tl.arange(0, BLOCK) + i * BLOCK
-        # kt_col_off = off_block
+
         kt_col_off_mask = kt_col_off < n
         kt_off = kt_col_off[None, :] * d + kt_row_off[:, None]
 
-        # if i == i_check:
-        #     print(f"kt_off={qk_offset + kt_off}")
-
         kt = tl.load(K + kt_off, mask=kt_col_off_mask[None, :], other=0.0).to(tl.float32)
-
-
-
-        # tl.device_print("fwd_kernel_v1 kt: ", kt)
-
-        # tl.static_print(f"kt shape=", kt_off.shape)
 
         # load V size BLOCK x BLOCK_MODEL
         v_row_off = tl.arange(0, BLOCK) + i * BLOCK
@@ -128,77 +66,29 @@ def fwd_kernel_v1(
         v_row_mask = v_row_off < n
         v_off = v_row_off[:, None] * e + v_col_off[None, :]
 
-        # if i == i_check:
-        #     print(f"v_off={vo_offset + v_off}")
-
         v = tl.load(V + v_off, mask=v_row_mask[:, None], other=0.0).to(tl.float32)
 
-
-        # if tl.program_id(0) == 0 and tl.program_id(1) == 0 and i == 0:
-        #     print(f"q: {q}, k: {kt}, v{v}")
-
-        # tl.device_print("fwd_kernel_v1 v: ", v)
-
-        # tl.static_print(f"v shape=", v.shape)
-
-        # compute intra block
         qk = tl.dot(q, kt)  # BLOCK x BLOCK
         o_intra = tl.dot(qk * diag_decay, v)   # o_intra = qkv, size: BLOCK x BLOCK_MODEL
-        #tl.static_print("fwd_kernel_v1: o_intra shape=", o_intra.shape)
-        # tl.device_print("fwd_kernel_v1 o_intra: ", o_intra)
-        # compute inter block
 
         o_inter = tl.dot(q, kv) * q_decay # BLOCK x BLOCK_MODEL
-        # tl.device_print("fwd_kernel_v1 o_inter: ", o_inter)
-        # tl.static_print("fwd_kernel_v1: o_inter shape=", o_inter.shape)
-
-        # if tl.program_id(0) == 0 and tl.program_id(1) == 0 and i == 0:
-        #     print(f"o_intra {o_intra}, o_inter {o_inter}")
 
         o = o_intra + o_inter
-        #tl.device_print("fwd_kernel_v1 o value: ", o)
 
-
-        # tl.static_print("fwd_kernel_v1: o shape=", o.shape)
 
         # update kv
         new_kv = tl.dot(kt * k_decay, v)  # d x BLOCK_MODEL
 
         kv = block_decay * kv + new_kv
 
-        # write result back TODO: o data type align
-        # o_row_off = tl.arange(0, BLOCK) + i * BLOCK
-        # o_col_off = tl.arange(0, BLOCK_MODEL) + by * BLOCK_MODEL
-        # # tl.static_print(f"o_col_off shape=", o_col_off.shape)
-        # o_off = o_row_off[:, None] * e + o_col_off[None, :]
-        # # tl.static_print("fwd_kernel_v1: o_off shape=", o_off.shape)
-        # # tl.device_print("fwd_kernel_v1 o value: ", o)
-        # o_row_mask = o_row_off[:, None] < n
-
-        # if i == i_check:
-        #     print(f"o_off={vo_offset + o_off}")
-
-        # tl.store(O + o_off, o.to(O_block_ptr.dtype.element_ty), mask=o_row_mask)
-
-
-        # copy from v0
-        # o_off = (o_offset + e_offset + tl.arange(0, BLOCK_MODEL)[None, :]) + off_block[:, None] * e
-
         o_row_off = tl.arange(0, BLOCK) + BLOCK * i
         o_off = o_row_off[:, None] * e + (tl.arange(0, BLOCK_MODEL)[None, :] + by * BLOCK_MODEL)
 
-        # tl.static_print("fwd_kernel_v0: o_off shape=", o_off.shape)
-        # tl.device_print("fwd_kernel_v0 o value: ", o)
-
-        # print(f"o shape: {o.shape}")
-
-        # save and update
         tl.store(
             O + o_off,
             o.to(O_block_ptr.dtype.element_ty),
             mask=o_row_off[:, None] < n,
         )
-        # off_block += BLOCK
-        # end of copy from v0
+
 
     # tl.device_print("bx=", bx, " by=", by, " finished!")
