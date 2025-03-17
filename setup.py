@@ -78,10 +78,10 @@ setup(
     packages=find_packages(),
     ext_modules=get_extensions(),
     install_requires=["torch"],
-    description="Example of PyTorch C++ and CUDA extensions",
+    description="Lightning Attention CUDA implementation",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
-    url="https://github.com/pytorch/extension-cpp",
+    url="https://github.com/xiefan46/lightning-attention-cuda",
     cmdclass={"build_ext": BuildExtension},
     options={"bdist_wheel": {"py_limited_api": "cp39"}} if py_limited_api else {},
 )
