@@ -3,7 +3,7 @@
 #include <cuda.h>
 #include <cuda_runtime.h>
 
-namespace extension_cpp {
+namespace lightning_attn_cuda {
 
 __global__ void muladd_kernel(int numel, const float* a, const float* b, float c, float* result) {
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -76,7 +76,7 @@ void myadd_out_cuda(const at::Tensor& a, const at::Tensor& b, at::Tensor& out) {
 
 
 // Registers CUDA implementations for mymuladd, mymul, myadd_out
-TORCH_LIBRARY_IMPL(extension_cpp, CUDA, m) {
+TORCH_LIBRARY_IMPL(lightning_attn_cuda, CUDA, m) {
   m.impl("mymuladd", &mymuladd_cuda);
   m.impl("mymul", &mymul_cuda);
   m.impl("myadd_out", &myadd_out_cuda);
